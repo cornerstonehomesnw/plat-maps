@@ -420,7 +420,7 @@ function parseCSV(text){
   return rows.filter(r => r.some(Boolean)).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i]||'').trim()])));
 }
 // sheet headers are matched loosely, and accept either "Lot" or "Homesite" wording:
-// "Homesite Size (acres)" -> lotsize, "Homesite Page Link" -> link, etc.
+// "Lot Size (acres)" -> lotsize, "Homesite Page Link" -> link, etc.
 const HEADER_KEYS = {lot:'lot', homesite:'lot', status:'status', plan:'plan', price:'price', sqft:'sqft', squarefeet:'sqft',
   beds:'beds', baths:'baths', lotsize:'lotsize', lotsizeacres:'lotsize', acres:'lotsize',
   homesitesize:'lotsize', homesitesizeacres:'lotsize',
