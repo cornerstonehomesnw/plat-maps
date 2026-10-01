@@ -326,7 +326,7 @@ function drawSide(){
     <button class="close" aria-label="Close homesite details">Close</button>
     ${render_img(r, plan)}
     <div class="badge"><span class="pin" style="background:${st.hex}"></span>${st.label}</div>
-    <h2>Homesite ${esc(r.lot)}</h2>
+    <h2>Homesite #${esc(r.lot)}</h2>
     <p class="price">${r.price ? esc(money(r.price)) : 'Contact us for pricing'}</p>
     <dl>
       <dt>Plan</dt><dd>${esc(planLabel(r))}${(r.design || '').trim() ? ' - ' + esc(r.design.trim()) : ''}</dd>
