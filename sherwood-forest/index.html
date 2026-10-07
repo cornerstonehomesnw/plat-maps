@@ -446,6 +446,14 @@ function applySheet(csvText){
   // a row whose Lot cell says "Hero image" sets the photo on the welcome card (from its Rendering cell)
   const hero = rows.find(r => /^(hero|hero image|hero photo|community photo|welcome photo)$/i.test((r.lot || '').trim()));
   if (hero && hero.image) INTRO.image = hero.image.trim();
+  // a row labeled "Plat description" (or "Description") sets the welcome card's text, from the next filled cell after the label
+  for (const cells of parseCSV(csvText).map(o => Object.values(o))) {
+    const i = cells.findLastIndex(c => /^(plat description|description|welcome text|intro)\b/i.test(c));
+    if (i < 0) continue;
+    const text = cells.slice(i + 1).find(Boolean);
+    if (text) INTRO.text = text;
+    break;
+  }
   const byLot = Object.fromEntries(rows.filter(r => r.lot).map(r => [r.lot.toUpperCase(), r]));
   data = LOTS.map(r => {
     const s = byLot[r.lot.toUpperCase()];
