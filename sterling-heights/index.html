@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sterling Heights Homesite Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ------------------------------------------------------------------
+   Theme — light only, to sit on the white website page
+------------------------------------------------------------------- */
+:root{
+  color-scheme:light;
+  --bg:#ffffff; --surface:#ffffff; --ink:#252a24; --ink-soft:#5d655b; --line:#dfe3dc;
+  --pine:#557A4A; --pine-ink:#3f5c37; --focus:#2f6fd6;
+  --navy:#1A303B; --btn:#639150;
+  --serif:Bitter,Georgia,"Times New Roman",serif;
+  --sans:Quicksand,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --head:var(--serif);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{background:#ffffff}
+body{margin:0;color:var(--navy);font:400 16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+
+/* layout matches the other community pages: title, wide map, then directions + key */
+.wrap{margin:0 auto}
+/* the map runs edge to edge; title, directions and key stay in the page column */
+.title,.foot,.plans{width:min(1160px,calc(100% - 32px));margin-left:auto!important;margin-right:auto!important}
+.title{font:400 32px/1.3 var(--serif);color:var(--navy);text-align:center;margin:30px 0 15px}
+.stage{position:relative;aspect-ratio:3/2;background:#D2D3D5;overflow:hidden}
+.map{position:absolute;top:0;bottom:0;left:0;right:392px;line-height:0}
+#plat{width:100%;height:100%;display:block;overflow:visible;user-select:none;-webkit-user-select:none}
+#plat .lot{fill:#fff;stroke:#BDBFC1;stroke-width:7;transition:fill .15s}
+#plat .lot.off{fill:#D2D3D5}
+#plat .lot.on{cursor:pointer}
+#plat .lot.on:hover,#plat .lot.on.hover{fill:#f2f6ef}
+#plat .lot.sel{fill:#e4eedf}
+#plat .lot:focus{outline:none}
+#plat .outline{fill:none;stroke:var(--pine);stroke-width:30;pointer-events:none;stroke-linejoin:round}
+#plat .house{stroke:#D2D3D5;stroke-width:3;cursor:pointer;transition:opacity .2s}
+#plat .dot{cursor:pointer;transition:opacity .2s}
+#plat .label{font:400 131.49px Arial,Helvetica,sans-serif;fill:#fff;stroke:#fff;stroke-width:3;pointer-events:none}
+#plat .ctx{font:700 125px Arial,Helvetica,sans-serif;fill:#A9ABAE;pointer-events:none}
+#plat .street{font:700 166.67px Arial,Helvetica,sans-serif;fill:#D2D3D5;pointer-events:none}
+#plat #ground{pointer-events:none}
+#plat .label.sm{font-size:111.62px}
+#plat .label.tbd{fill:#b9bcc0;stroke:#b9bcc0}
+#plat .house.unlisted{stroke:#CCCCCC;stroke-width:10;cursor:default}
+#plat .dot.unlisted{cursor:default}
+#plat .dim{opacity:.18}
+#plat text{font-family:Arial,Helvetica,sans-serif}
+#plat #entry-gate text{font:normal 700 111px Arial,Helvetica,sans-serif}
+
+/* ------------------------------------------------------------------
+   Homesite card
+------------------------------------------------------------------- */
+.side{position:absolute;top:16px;right:16px;width:360px;max-height:calc(100% - 32px);overflow-y:auto;
+  background:#fff;border-radius:6px;padding:22px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.side.is-empty h2{font-size:24px;margin-bottom:10px}
+.side .eyebrow{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--btn);margin:0 0 6px}
+.side .intro{margin:0 0 14px;line-height:1.55}
+.side .price{font-style:italic;font-size:18px;margin:0 0 14px;color:var(--navy)}
+.side .hint{color:var(--ink-soft);margin:0}
+.side h2{font-family:var(--serif);font-size:28px;line-height:1.15;font-weight:400;margin:0 0 4px;color:var(--navy)}
+.badge{font-weight:700;display:inline-flex;align-items:center;gap:7px;font-size:14px;margin-bottom:10px}
+.pin{width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.12);flex:none}
+.side dl{margin:6px 0 18px;display:grid;grid-template-columns:auto 1fr;gap:6px 16px}
+.side dl:last-child{margin-bottom:0}
+.side dt{color:var(--ink-soft)}
+.side dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+.btn{position:relative;display:inline-block;border:1px solid var(--btn);color:var(--btn);background:transparent;
+  font:400 16px/24px var(--sans);text-transform:uppercase;text-decoration:none;padding:6px 56px 6px 12px;transition:background .15s,color .15s}
+.btn .arrow{position:absolute;top:0;right:0;bottom:0;width:40px;border-left:1px solid currentColor}
+.btn .arrow::after{content:"";position:absolute;left:13px;top:50%;width:9px;height:9px;border-top:1px solid currentColor;border-right:1px solid currentColor;transform:translateY(-50%) rotate(45deg)}
+.btn:hover{background:var(--btn);color:#fff}
+.side .btn{display:block;margin-top:4px}
+.plans{list-style:none;margin:22px 0 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px 20px;font-family:Arial,Helvetica,sans-serif}
+.plans[hidden]{display:none}
+.plans li{display:flex;align-items:center;gap:10px;min-width:0}
+.plans .chip{width:50px;height:50px;flex:none}
+.plans b{display:block;font-weight:700;font-size:19px;line-height:1.15}
+.plans small{display:block;font-weight:700;font-size:12.5px;letter-spacing:.02em;text-transform:uppercase;line-height:1.35}
+.foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px 40px;margin:30px 0 10px}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:12px 36px}
+.legend li{display:flex;align-items:center;gap:10px;font-size:16px;color:var(--navy)}
+.legend .swatch{width:36px;height:36px;border-radius:50%;flex:none}
+.rendering{margin:-22px -22px 16px;aspect-ratio:7/4;overflow:hidden;background:var(--line)}
+.rendering img{width:100%;height:100%;object-fit:cover;display:block}
+.rendering:not(.empty) span{display:none}
+.rendering.empty{display:flex;align-items:flex-end;position:relative;background:var(--plan)}
+.rendering.empty::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.45))}
+.rendering.empty span{position:relative;color:#fff;font-weight:700;font-size:15px;padding:12px 16px}
+.side .close{font-family:var(--sans);position:absolute;top:10px;right:10px;z-index:2;background:rgba(255,255,255,.94);border:0;border-radius:6px;padding:5px 11px;color:#252a24;font-size:14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+
+/* desktop: everything fits inside the embed's height, no scrollbar */
+@media (min-width:761px){
+  html,body{height:100%;overflow:hidden}
+  /* the plat is the full page-column width (1160px); the card panel sits to its right,
+     so the map + card group is centered and the map itself sits a little left of center */
+  :root{--mapw:min(1160px, calc(100vw - 424px))}
+  .wrap{display:flex;flex-direction:column;width:calc(var(--mapw) + 392px);margin:0 auto}
+  /* title centered on the page; directions at the map's left edge, key at the grey panel's right edge */
+  .title,.foot,.plans{width:100%;margin-left:0!important;margin-right:0!important}
+  .title{flex:none;margin:12px 0 14px}
+  .stage{flex:none;aspect-ratio:auto;height:calc(var(--mapw) * 0.5449)}
+  .side{top:50%;transform:translateY(-50%);max-height:calc(100% - 16px);padding:16px 24px;font-size:17px}
+  .side .rendering{margin:-16px -24px 12px}
+  .side .badge{margin-bottom:4px}
+  .side h2{font-size:29px}
+  .side .price{margin:0 0 8px}
+  .side dl{margin:0 0 10px;gap:1px 16px;line-height:1.3}
+  .side h2{line-height:1.1;margin-bottom:2px}
+  .side .price{font-size:19px}
+  .side .intro{margin-bottom:10px;line-height:1.45}
+  .side .btn{margin-top:0}
+  .plans{flex:none;margin-top:16px}
+  .foot{flex:none;margin:18px 0 4px}
+}
+
+/* phones and narrow frames: title, map, card, key stacked — still filling the embed's height, no scrollbar */
+/* phones and narrow frames: title, map, status key, card, then directions.
+   Nothing scrolls: the page is as tall as its content and the card shows in full. */
+@media (max-width:760px){
+  html,body{height:auto;overflow:hidden}
+  .wrap{display:flex;flex-direction:column}
+  .stage{display:contents}
+  .title{order:0;flex:none;font-size:24px;margin:6px 0 10px}
+  .map{order:1;position:relative;flex:none;height:auto;right:auto;background:#D2D3D5;overflow:hidden}
+  #plat{height:auto}
+  .foot{display:contents}
+  .legend{order:3;flex:none;margin:8px 12px 0;flex-wrap:nowrap;justify-content:space-between;gap:0 6px}
+  .legend li{font-size:min(13px, 2.45vw);gap:3px;white-space:nowrap}
+  .legend .swatch{width:min(14px, 2.9vw);height:min(14px, 2.9vw)}
+  .side{order:4;position:relative;top:auto;right:auto;flex:none;width:auto;max-height:none;margin:10px 12px 0;padding:16px;
+    box-shadow:none;border:1px solid var(--line);overflow:visible}
+  .rendering{margin:-16px -16px 12px;aspect-ratio:21/9}
+  .side h2{font-size:22px}
+  .side .intro{font-size:15px}
+  #directions{order:5;flex:none;align-self:flex-start;margin:10px 12px 2px;font-size:14px;padding:4px 50px 4px 10px}
+  #directions .arrow{width:36px}
+}
+
+/* ---- Sterling Heights: tall plat, lots drawn green with houses and driveways ---- */
+#plat .lot{fill:#6E9C5C;stroke:#D2D3D5;stroke-width:6.68}
+#plat .lot.on:hover,#plat .lot.on.hover{fill:#7dab6a}
+#plat .lot.sel{fill:#86b374}
+#plat .outline{stroke:#fff;stroke-width:26}
+#plat .bldg{cursor:default}
+#plat .bldg.on{cursor:pointer}
+#plat .home{fill:#fff;stroke:#D2D3D5;stroke-width:6.68}
+#plat .drive{fill:#D2D3D5;stroke:#D2D3D5;stroke-width:2.88}
+#plat .street{font-size:160.2px}
+#plat .label{font-size:229.71px}
+.stage{background:#fff}
+@media (min-width:761px){
+  /* portrait plat: map and card side by side, centered as a group */
+  :root{--maph:clamp(520px, 60vw, 720px)}
+  .wrap{width:min(1160px, calc(100vw - 32px))}
+  .stage{height:var(--maph);display:flex;justify-content:center;align-items:center;gap:48px}
+  .map{position:relative;top:auto;bottom:auto;left:auto;right:auto;flex:none;height:100%;width:calc(var(--maph) * 0.56359)}
+  .side{position:relative;top:auto;right:auto;transform:none;flex:none;max-height:100%}
+}
+@media (max-width:760px){
+  .map{background:#fff;width:min(100%, 420px);align-self:center}
+}
+
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1 class="title">Community Map</h1>
+  <div class="stage">
+    <div class="map"><svg id="plat" viewBox="0 0 3452.92 6126.62" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Sterling Heights homesite map"><g id="ground"><rect x="0" y="419.46" width="3452.92" height="5287.7" fill="#557A4A"/><rect x="0" y="0" width="3452.92" height="419.46" fill="#4B4B4D"/><rect x="0" y="5707.16" width="3452.92" height="419.46" fill="#4B4B4D"/><rect x="0" y="419.46" width="3452.92" height="110.67" fill="#999999"/><rect x="0" y="5596.48" width="3452.92" height="110.68" fill="#999999"/></g><g id="parcels"><path class="lot" data-lot="1" d="M1726.46 530.13H2826.59V3063.31H1726.46Z"/><path class="lot" data-lot="2" d="M626.33 530.13H1726.46V3063.31H626.33Z"/><path class="lot" data-lot="3" d="M1726.46 3063.31H2826.59V5596.48H1726.46Z"/><path class="lot" data-lot="4" d="M626.33 3063.31H1726.46V5596.48H626.33Z"/></g><g id="fg"><path class="bldg drive" data-lot="1" d="M1917.39 530.13H2343.28V1010.65H1917.39Z"/><path class="bldg drive" data-lot="2" d="M1109.64 530.13H1535.53V1010.65H1109.64Z"/><path class="bldg drive" data-lot="3" d="M1917.39 5114.36H2343.28V5633.28H1917.39Z"/><path class="bldg drive" data-lot="4" d="M1109.64 5114.36H1535.53V5645.58H1109.64Z"/><path class="bldg home" data-lot="1" d="M1917.39 1010.65H2635.66V2221.17H1917.39Z"/><path class="bldg home" data-lot="2" d="M817.26 1010.65H1535.53V2221.17H817.26Z"/><path class="bldg home" data-lot="3" d="M1917.39 3903.83H2635.66V5114.36H1917.39Z"/><path class="bldg home" data-lot="4" d="M817.26 3903.83H1535.53V5114.36H817.26Z"/><text class="street" x="1726.46" y="256.93" text-anchor="middle">123rd Street SE</text><text class="street" x="1726.46" y="5974.24" text-anchor="middle">124th Street SE</text></g><g id="dots"><circle class="dot" data-lot="1" cx="2276.52" cy="1615.91" r="168.21" fill="#7C7C7C"/><circle class="dot" data-lot="2" cx="1176.4" cy="1615.91" r="168.21" fill="#7C7C7C"/><circle class="dot" data-lot="3" cx="2276.52" cy="4509.09" r="168.21" fill="#7C7C7C"/><circle class="dot" data-lot="4" cx="1176.4" cy="4509.09" r="168.21" fill="#7C7C7C"/></g><g id="labels"><text class="label" data-lot="1" x="2276.52" y="1697.51" text-anchor="middle">1</text><text class="label" data-lot="2" x="1176.4" y="1697.51" text-anchor="middle">2</text><text class="label" data-lot="3" x="2276.52" y="4590.69" text-anchor="middle">3</text><text class="label" data-lot="4" x="1176.4" y="4590.69" text-anchor="middle">4</text></g></svg></div>
+    <aside class="side" id="side" aria-live="polite"></aside>
+  </div>
+  <div class="foot">
+    <a class="btn" id="directions" href="#" target="_blank" rel="noopener">Get Directions<span class="arrow"></span></a>
+    <ul class="legend" id="legend" aria-label="Homesite status key"></ul>
+  </div>
+</main>
+
+<script>
+(async () => {
+// the plat drawing lives in plat.svg next to this file
+if (!document.getElementById('plat')) {
+  const res = await fetch('plat.svg');
+  document.querySelector('.map').innerHTML = await res.text();
+}
+
+/* ==================================================================
+   1. HOMESITE DATA — edit this list, or point SHEET_CSV_URL at a sheet.
+   Columns: lot (the homesite number), listed, status, plan, design, price, sqft, beds, baths, lotsize, link, image (the sheet can list them in any order)
+   listed: true shows the house in its plan colors and adds its plan to the key; false draws it as a plain outline
+   lotsize: a number is shown in acres ("3.2" -> "3.2 acres"), or type it out ("3.2 acres")
+   link: the homesite's page on the website (adds an "Explore This Home" button to its card)
+   image: a rendering for this homesite; leave blank to use the plan's rendering below
+   status: Available | Move-in ready | Coming soon | Model home | Sold
+   "Sold" greys the homesite out and covers everything on it.
+   Optional rows: "Hero image" (photo link in the Rendering column) and "Plat description" (welcome text in the cell right after the label).
+================================================================== */
+// text for the welcome card shown before a homesite is selected
+const INTRO = {
+  image:   "",  // add a "Hero image" row to the sheet to show a photo here
+  eyebrow: "Coming Soon · Everett, WA",
+  title:   "Welcome to Sterling Heights",
+  text:    "Four new homesites in Everett, between 123rd and 124th Street SE.",
+  hint:    "Select a homesite on the map to see its details.",
+};
+const COMMUNITY = "Sterling Heights";  // shown on the welcome photo
+const DIRECTIONS_URL = "https://www.google.com/maps/dir/?api=1&destination=2418+123rd+St+SE,+Everett,+WA+98208"; // paste the Google Maps directions link here
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgs5oFVUF5gY3vtGYGV2XYoS2kqnP5KyDB8sKV3_-izspuxymoBHS2xmdngvJx5SUKMiu0LwFKqDq5/pub?gid=885235772&single=true&output=csv"; // Web Plat Maps, SH
+
+const LOTS = [
+  {lot:"1", status:"Coming soon", plan:"", price:"", sqft:"", beds:"", baths:"", link:"", image:"", listed:false},
+  {lot:"2", status:"Coming soon", plan:"", price:"", sqft:"", beds:"", baths:"", link:"", image:"", listed:false},
+  {lot:"3", status:"Coming soon", plan:"", price:"", sqft:"", beds:"", baths:"", link:"", image:"", listed:false},
+  {lot:"4", status:"Coming soon", plan:"", price:"", sqft:"", beds:"", baths:"", link:"", image:"", listed:false},
+];
+
+/* 2. PLANS — this map has no plan colors or plan key; the Plan column still shows on each card.
+   Add image:"..." to a plan to show its rendering on every homesite with that plan.
+   also: other names the sheet may use for the same plan. */
+const PLANS = [
+  {name:"TBD", base:"#3D6983", tbd:true},
+];
+const STATUSES = [
+  {name:"Move-in ready", label:"Move-in Ready", hex:"#6E9C5C"},
+  {name:"Available",     label:"Available",     hex:"#3D6983"},
+  {name:"Coming soon",   label:"Coming Soon",   hex:"#7C7C7C"},
+  {name:"Model home",    label:"Model Home",    hex:"#333333"},
+  {name:"Sold",          label:"Sold",          hex:"#993400", cover:true},
+];
+
+/* ==================================================================
+   Map logic — no edits needed below this line
+================================================================== */
+const svg = document.getElementById('plat');
+const NS = 'http://www.w3.org/2000/svg';
+const norm = s => (s||'').trim().toLowerCase();
+const planNames = x => [x.name, ...(x.also || [])].map(norm);
+const planKey = p => { const n = norm(p); const hit = PLANS.find(x => planNames(x).some(k => k === n || k === 'the ' + n)); return hit || PLANS.find(x => x.tbd); };
+// the plan name as written on the sheet ("The Wilson"), or 'To be determined'
+const planLabel = r => (!r.plan || /^tbd$/i.test(r.plan.trim())) ? 'To be determined' : r.plan.trim();
+const squash = s => norm(s).replace(/[^a-z]/g, '');
+const statusOf = s => STATUSES.find(x => squash(x.name) === squash(s)) || STATUSES.find(x => x.cover); // unrecognized = treated as sold
+let data = LOTS.map(r => ({...r}));
+let selected = null;
+
+// hatch patterns
+const defs = document.createElementNS(NS, 'defs');
+PLANS.forEach((p, i) => {
+  p.fill = p.base;
+  if (!p.stripe) return;
+  const pat = document.createElementNS(NS, 'pattern');
+  pat.id = 'hatch' + i;
+  pat.setAttribute('patternUnits', 'userSpaceOnUse');
+  pat.setAttribute('width', '52'); pat.setAttribute('height', '52');
+  pat.setAttribute('patternTransform', 'rotate(-45)');
+  pat.innerHTML = `<rect width="52" height="52" fill="${p.base}"/><rect width="12" height="52" fill="${p.stripe}"/>`;
+  defs.appendChild(pat);
+  p.fill = `url(#hatch${i})`;
+});
+svg.prepend(defs);
+
+// sold lots move into this layer, drawn over houses, driveways and dots
+const parcelsG = svg.querySelector('#parcels');
+const coverG = document.createElementNS(NS, 'g');
+coverG.id = 'sold-cover';
+svg.insertBefore(coverG, svg.querySelector('#fg'));
+// entry gate sits above the sold-homesite covers so it is never hidden
+const gate = svg.querySelector('#entry-gate');
+if (gate) svg.insertBefore(gate, svg.querySelector('#labels'));
+
+const outline = document.createElementNS(NS, 'path');
+outline.setAttribute('class', 'outline');
+svg.insertBefore(outline, svg.querySelector('#fg'));
+
+const els = lot => svg.querySelectorAll(`[data-lot="${CSS.escape(lot)}"]`);
+const parcel = lot => svg.querySelector(`.lot[data-lot="${CSS.escape(lot)}"]`);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  const byLot = Object.fromEntries(data.map(r => [r.lot, r]));
+  svg.querySelectorAll('.lot').forEach(p => {
+    const r = byLot[p.dataset.lot];
+    const st = r && statusOf(r.status);
+    const plan = r && planKey(r.plan);
+    const shown = true;   // sold homesites stay on the map with a red dot
+    const listed = !st.cover && isListed(r.listed);
+    const layer = shown ? parcelsG : coverG;
+    if (p.parentNode !== layer) layer.appendChild(p);
+    p.classList.toggle('off', !shown);
+    p.classList.toggle('on', listed);
+    p.classList.toggle('sel', selected === p.dataset.lot);
+    if (listed){
+      p.setAttribute('tabindex', '0'); p.setAttribute('role', 'button');
+      p.setAttribute('aria-label', `Homesite ${p.dataset.lot}, ${planLabel(r)}, ${st.label}`);
+    } else { p.removeAttribute('tabindex'); p.removeAttribute('role'); p.removeAttribute('aria-label'); }
+    els(p.dataset.lot).forEach(el => {
+      if (el === p) return;
+      el.style.display = shown ? '' : 'none';
+      if (!shown) return;
+      if (el.classList.contains('house')) { el.style.fill = listed ? plan.fill : '#FFFFFF'; el.classList.toggle('unlisted', !listed); }
+      if (el.classList.contains('bldg')) el.classList.toggle('on', listed);
+      if (el.classList.contains('dot')) { el.style.fill = st.hex; el.classList.toggle('unlisted', !listed); }
+    });
+  });
+  drawSide();
+}
+
+// "TRUE", "Yes", "x", a ticked checkbox, etc. all count as listed
+function isListed(v){ return v === true || /^(true|yes|y|x|1|listed|✓|✔)$/i.test(String(v ?? '').trim()); }
+
+
+
+// directions button and status key
+const dir = document.getElementById('directions');
+if (DIRECTIONS_URL) dir.href = DIRECTIONS_URL;
+document.getElementById('legend').innerHTML = STATUSES.map(s =>
+  `<li><span class="swatch" style="background:${s.hex}"></span>${s.label}</li>`).join('');
+
+function counts(){
+  const c = {}; data.forEach(r => { const s = statusOf(r.status); c[s.name] = (c[s.name]||0) + 1; }); return c;
+}
+function drawSide(){
+  const side = document.getElementById('side');
+  const r = selected && data.find(x => x.lot === selected);
+  const st = r && statusOf(r.status);
+  if (!r || st.cover || !isListed(r.listed)){
+    side.className = 'side is-empty';
+    side.innerHTML = `${INTRO.image ? `<figure class="rendering" style="--plan:linear-gradient(135deg,#6E9C5C,#3f5c37)"><img src="${esc(INTRO.image)}" alt="${esc(COMMUNITY)}" onerror="this.parentNode.classList.add('empty');this.remove()"><span>${esc(COMMUNITY)}</span></figure>` : ''}<p class="eyebrow">${esc(INTRO.eyebrow)}</p><h2>${esc(INTRO.title)}</h2><p class="intro">${esc(INTRO.text)}</p><p class="hint">${esc(INTRO.hint)}</p>`;
+    outline.setAttribute('d', '');
+    return;
+  }
+  const plan = planKey(r.plan);
+  const lotEl = parcel(r.lot);
+  outline.setAttribute('d', lotEl.getAttribute('d'));
+  side.className = 'side';
+  side.innerHTML = `
+    <button class="close" aria-label="Close homesite details">Close</button>
+    ${render_img(r, plan)}
+    <div class="badge"><span class="pin" style="background:${st.hex}"></span>${st.label}</div>
+    <h2>Homesite #${esc(r.lot)}</h2>
+    <p class="price">${r.price ? esc(money(r.price)) : 'Contact us for pricing'}</p>
+    <dl>
+      <dt>Plan</dt><dd>${esc(planLabel(r))}${(r.design || '').trim() ? ' - ' + esc(r.design.trim()) : ''}</dd>
+      <dt>SQFT</dt><dd>${show(r.sqft, v => withCommas(v))}</dd>
+      <dt>Beds</dt><dd>${show(r.beds)}</dd>
+      <dt>Baths</dt><dd>${show(r.baths)}</dd>
+    </dl>
+    ${r.link ? `<a class="btn" href="${esc(r.link)}" target="_top">Explore This Home<span class="arrow"></span></a>` : ''}`;
+  side.querySelector('.close').onclick = () => { selected = null; render(); };
+  if (matchMedia('(max-width:760px)').matches) side.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+// value formatting: "489900" -> "$489,900", "1850" -> "1,850"; blanks show a dash
+const isNum = v => /^\$?[\d,]+(\.\d+)?$/.test(String(v).trim());
+const withCommas = v => isNum(v) ? Number(String(v).replace(/[$,]/g,'')).toLocaleString('en-US') : v;
+const money = v => isNum(v) ? '$' + withCommas(v) : v;
+const show = (v, f = x => x) => (v ?? '') === '' ? '<span style="color:var(--ink-soft);font-weight:400">—</span>' : esc(f(v));
+
+function render_img(r, plan){
+  const src = r.image || plan.image;
+  const fill = plan.stripe
+    ? `repeating-linear-gradient(-45deg, ${plan.base} 0 10px, ${plan.stripe} 10px 13px)`
+    : plan.base;
+  if (src) return `<figure class="rendering" style="--plan:${fill}"><img src="${esc(src)}" alt="Rendering of ${esc(planLabel(r))} on homesite ${esc(r.lot)}" onerror="this.parentNode.classList.add('empty');this.insertAdjacentHTML('afterend','<span>Rendering coming soon</span>');this.remove()"></figure>`;
+  return `<figure class="rendering empty" style="--plan:${fill}"><span>Rendering coming soon</span></figure>`;
+}
+
+// interaction: any element tagged with a homesite opens it
+function pick(lot){
+  const r = data.find(x => x.lot === lot);
+  if (!r || statusOf(r.status).cover || !isListed(r.listed)) return;
+  selected = selected === lot ? null : lot; render();
+}
+svg.addEventListener('click', e => { const t = e.target.closest('[data-lot]'); if (t) pick(t.dataset.lot); });
+svg.addEventListener('keydown', e => {
+  const t = e.target.closest('.lot'); if (!t) return;
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(t.dataset.lot); }
+});
+svg.addEventListener('pointerover', e => { const t = e.target.closest('.house,.dot,.bldg'); if (t) parcel(t.dataset.lot)?.classList.add('hover'); });
+svg.addEventListener('pointerout',  e => { const t = e.target.closest('.house,.dot,.bldg'); if (t) parcel(t.dataset.lot)?.classList.remove('hover'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && selected) { selected = null; render(); } });
+
+// optional live data from a sheet
+function parseCSV(text){
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"' && text[i+1] === '"'){ cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ','){ row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r'){ if (ch === '\r' && text[i+1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell || row.length){ row.push(cell); rows.push(row); }
+  const head = rows.shift().map(h => norm(h));
+  return rows.filter(r => r.some(Boolean)).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i]||'').trim()])));
+}
+// sheet headers are matched loosely, and accept either "Lot" or "Homesite" wording:
+// "Lot Size (acres)" -> lotsize, "Homesite Page Link" -> link, etc.
+const HEADER_KEYS = {lot:'lot', homesite:'lot', status:'status', plan:'plan', price:'price', sqft:'sqft', squarefeet:'sqft',
+  beds:'beds', baths:'baths', lotsize:'lotsize', lotsizeacres:'lotsize', acres:'lotsize',
+  homesitesize:'lotsize', homesitesizeacres:'lotsize',
+  link:'link', lotpage:'link', lotpagelink:'link', homesitepage:'link', homesitepagelink:'link',
+  rendering:'image', image:'image', listed:'listed', listedonwebsite:'listed', list:'listed', onwebsite:'listed', design:'design', elevation:'design'};
+// merge sheet rows (from the published CSV) into the built-in homesite list
+function applySheet(csvText){
+  const rows = parseCSV(csvText).map(o => {
+    const r = {}; for (const [k, v] of Object.entries(o)) { const key = HEADER_KEYS[squash(k)]; if (key) r[key] = v; } return r;
+  });
+  // a row whose Homesite cell says "Hero image" sets the photo on the welcome card (from its Rendering cell)
+  const hero = rows.find(r => /^(hero|hero image|hero photo|community photo|welcome photo)$/i.test((r.lot || '').trim()));
+  if (hero && hero.image) INTRO.image = hero.image.trim();
+  // a row labeled "Plat description" (or "Description") sets the welcome card's text, from the next filled cell after the label
+  for (const cells of parseCSV(csvText).map(o => Object.values(o))) {
+    const i = cells.findLastIndex(c => /^(plat description|description|welcome text|intro)\b/i.test(c));
+    if (i < 0) continue;
+    const text = cells.slice(i + 1).find(Boolean);
+    if (text) INTRO.text = text;
+    break;
+  }
+  const byLot = Object.fromEntries(rows.filter(r => r.lot).map(r => [r.lot.toUpperCase(), r]));
+  data = LOTS.map(r => {
+    const s = byLot[r.lot.toUpperCase()];
+    if (!s) return r;
+    // the sheet is the source of truth; a blank status keeps the built-in one so a homesite never vanishes by accident
+    return {...r, ...s, status: s.status || r.status};
+  });
+  render();
+}
+async function loadSheet(){
+  if (!SHEET_CSV_URL) return;
+  try{
+    const res = await fetch(SHEET_CSV_URL, {cache:'no-store'});
+    if (!res.ok) throw new Error(res.status);
+    applySheet(await res.text());
+  } catch(err){ console.warn('Homesite sheet could not be loaded; showing built-in data.', err); }
+}
+
+render(); loadSheet();
+
+// when embedded in an iframe, tell the host page how tall the map is
+const wrapEl = document.querySelector('.wrap');
+const postHeight = () => { try { parent.postMessage({lotMapHeight: Math.ceil(wrapEl.getBoundingClientRect().height)}, '*'); } catch(e){} };
+if (window.ResizeObserver) new ResizeObserver(postHeight).observe(wrapEl);
+addEventListener('load', postHeight);
+})();
+</script>
+</body>
+</html>
