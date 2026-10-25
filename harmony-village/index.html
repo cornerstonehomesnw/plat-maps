@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Harmony Village Homesite Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Libre+Franklin:wght@700&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ------------------------------------------------------------------
+   Theme — light only, to sit on the white website page
+------------------------------------------------------------------- */
+:root{
+  color-scheme:light;
+  --bg:#ffffff; --surface:#ffffff; --ink:#252a24; --ink-soft:#5d655b; --line:#dfe3dc;
+  --pine:#557A4A; --pine-ink:#3f5c37; --focus:#2f6fd6;
+  --navy:#1A303B; --btn:#639150; --ground:#D2D4D5; --lawn:#6F9C5C;
+  --serif:Bitter,Georgia,"Times New Roman",serif;
+  --sans:Quicksand,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{background:#ffffff}
+body{margin:0;color:var(--navy);font:400 16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+
+/* layout matches Sherwood Forest: title, map with the homesite card beside it, plan key, then directions + status key */
+/* flow-root keeps the title's top margin and the footer's bottom margin inside the wrapper, so the reported height includes them */
+.wrap{max-width:1160px;margin:0 auto;display:flow-root;padding-bottom:6px}
+.title{font:400 32px/1.3 var(--serif);color:var(--navy);text-align:center;margin:12px 0 14px}
+/* the card sits in its own column and is never cut off: if it is taller than the map, the stage grows and the map stays centered */
+.stage{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 336px;align-items:center;background:#fff}
+.map{line-height:0;aspect-ratio:7967.75/3622}
+#plat{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none}
+#plat text{font-family:Arial,Helvetica,sans-serif}
+
+/* homesites: plan colors stay put; only the status dot changes */
+#plat .house{stroke:#fff;stroke-width:7;transition:stroke-width .12s}
+#plat .house.unlisted{stroke:#BDBFC1}
+#plat .house.on{cursor:pointer}
+#plat .house.on:hover,#plat .house.on.hover{stroke-width:18}
+#plat .house:focus{outline:none}
+#plat .house.on:focus-visible{stroke:var(--focus);stroke-width:18}
+#plat .label{font:italic 400 71.34px Arial,Helvetica,sans-serif;fill:#fff;stroke:#fff;stroke-width:3;pointer-events:none}
+#plat .label.unlisted{fill:#858789;stroke:#858789}
+#plat .label.tbd{fill:#9a9da1;stroke:#9a9da1}
+#plat .dot{stroke:#fff;stroke-width:7}
+#plat .dot.unlisted{stroke:#BDBFC1}
+#plat .dot.on{cursor:pointer}
+/* selected homesite: the same green outline as the other community maps */
+#plat .outline-out{fill:none;stroke:var(--pine);stroke-width:30;stroke-linejoin:round;pointer-events:none}
+#plat .outline-in{display:none}
+
+/* ------------------------------------------------------------------
+   Homesite card — sits in the column beside the map
+------------------------------------------------------------------- */
+.side{position:relative;align-self:start;margin:14px 14px 14px 0;min-width:0;
+  background:#fff;border-radius:6px;padding:18px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.side .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--btn);margin:0 0 4px}
+.side .intro{margin:0 0 10px;line-height:1.45;font-size:15px}
+.side .hint{color:var(--ink-soft);margin:0;font-size:15px}
+.side h2{font-family:var(--serif);font-size:24px;line-height:1.15;font-weight:400;margin:0 0 4px;color:var(--navy)}
+.side .price{font-style:italic;font-size:17px;margin:0 0 8px;color:var(--navy)}
+.badge{font-weight:700;display:inline-flex;align-items:center;gap:7px;font-size:14px;margin-bottom:4px}
+.pin{width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.12);flex:none}
+.side dl{margin:0 0 12px;display:grid;grid-template-columns:auto 1fr;gap:1px 16px;font-size:15px;line-height:1.35}
+.side dt{color:var(--ink-soft)}
+.side dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+.side dd small{display:block;font-weight:700;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft)}
+.btn{position:relative;display:inline-block;border:1px solid var(--btn);color:var(--btn);background:transparent;
+  font:400 16px/24px var(--sans);text-transform:uppercase;text-decoration:none;padding:6px 56px 6px 12px;transition:background .15s,color .15s}
+.btn .arrow{position:absolute;top:0;right:0;bottom:0;width:40px;border-left:1px solid currentColor}
+.btn .arrow::after{content:"";position:absolute;left:13px;top:50%;width:9px;height:9px;border-top:1px solid currentColor;border-right:1px solid currentColor;transform:translateY(-50%) rotate(45deg)}
+.btn:hover{background:var(--btn);color:#fff}
+.side .btn{display:block}
+/* homesite renderings and the welcome photo share one 16:9 frame and fill it edge to edge (trimmed slightly as needed), so every card's picture is the same size */
+.rendering{margin:-18px -18px 12px;aspect-ratio:16/9;overflow:hidden;background:var(--line)}
+.rendering img{width:100%;height:100%;object-fit:cover;display:block}
+.rendering:not(.empty) span{display:none}
+.rendering.empty{display:flex;align-items:flex-end;position:relative;background:var(--plan)}
+.rendering.empty::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,.45))}
+.rendering.empty span{position:relative;color:#fff;font-weight:700;font-size:15px;padding:10px 14px}
+/* when the card is taller than the map, the white stage fills above and below the map */
+.side.is-empty h2{font-size:22px;margin-bottom:6px}
+.side .close{font-family:var(--sans);position:absolute;top:8px;right:8px;z-index:2;background:rgba(255,255,255,.94);border:0;border-radius:6px;padding:4px 10px;color:#252a24;font-size:14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+
+/* plan key (only plans shown on the map) */
+/* two rows of equal columns (set by script), so chips line up; the script shrinks the type if a design line wouldn't fit on one line.
+   Sizes are in em of the key's font size so everything scales together. */
+.plans{--cols:5;list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:14px 20px;font:11px Arial,Helvetica,sans-serif}
+.plans[hidden]{display:none}
+.plans li{display:flex;align-items:center;gap:9px;min-width:0}
+.plans .chip{width:4em;height:4em;flex:none}
+.plans b{display:block;font-weight:700;font-size:1.55em;line-height:1.15}
+.plans small{display:block;font-weight:700;font-size:1em;letter-spacing:.02em;text-transform:uppercase;line-height:1.35;white-space:nowrap}
+.foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px 40px;margin:18px 0 4px}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:12px 32px}
+.legend li{display:flex;align-items:center;gap:10px;font-size:16px;color:var(--navy)}
+.legend .swatch{width:32px;height:32px;border-radius:50%;flex:none}
+
+/* desktop: everything fits inside the embed's height, no scrollbar */
+@media (min-width:1000px){
+  html,body{overflow:hidden}
+}
+
+/* tablets, phones and narrow frames: title, map, plan key, status key, card, then directions.
+   Nothing scrolls: the page is as tall as its content and the card shows in full. */
+@media (max-width:999px){
+  html,body{height:auto;overflow:hidden}
+  .wrap{display:flex;flex-direction:column}
+  .stage{display:contents}
+  .title{order:0;font-size:24px;margin:6px 0 10px}
+  .map{order:1;background:var(--ground)}
+  .plans{order:2;margin:12px 12px 0;gap:8px 14px;font-size:10px}
+  .plans .chip{width:2.6em;height:2.6em}
+  .plans b{font-size:1.4em}
+  .foot{display:contents}
+  .legend{order:3;margin:12px 12px 0;flex-wrap:nowrap;justify-content:space-between;gap:0 6px}
+  .legend li{font-size:min(14px, 2.8vw);gap:5px;white-space:nowrap}
+  .legend .swatch{width:min(16px, 3.2vw);height:min(16px, 3.2vw)}
+  .side{order:4;position:relative;inset:auto;width:auto;margin:12px 12px 0;padding:16px;box-shadow:none;border:1px solid var(--line);overflow:visible}
+  .rendering{margin:-16px -16px 12px}
+  #directions{order:5;align-self:flex-start;margin:12px 12px 2px;font-size:14px;padding:4px 50px 4px 10px}
+  #directions .arrow{width:36px}
+}
+@media (max-width:560px){
+  /* phones: too narrow for two rows, so the key wraps into as many rows as it needs */
+  .plans{grid-template-columns:repeat(auto-fill,minmax(162px,1fr));gap:8px 14px;font-size:9.5px}
+  .plans .chip{width:1.9em;height:1.9em}
+  .plans b{font-size:1.26em}
+  /* the plan is wide: on phones the map scrolls sideways inside its frame */
+  .map{aspect-ratio:auto;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  #plat{width:880px;max-width:none;height:auto}
+  .legend{flex-wrap:wrap;justify-content:flex-start;gap:6px 16px}
+}
+
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1 class="title">Community Map</h1>
+  <div class="stage">
+    <div class="map"><svg xmlns="http://www.w3.org/2000/svg" viewBox="950 0 7967.75 3622" id="plat" role="group" aria-label="Harmony Village homesite map" preserveAspectRatio="xMidYMid meet"><defs><style type="text/css"><![CDATA[
+   
+    .str17 {stroke-width:42.16;stroke-miterlimit:2.61313}
+    .str7 {stroke:white;stroke-width:3.48;stroke-miterlimit:2.61313}
+    .str6 {stroke:white;stroke-width:3.48;stroke-miterlimit:9.98123}
+    .str12 {stroke:white;stroke-width:6.96;stroke-miterlimit:2.61313}
+    .str13 {stroke:white;stroke-width:6.96;stroke-miterlimit:2.61313}
+    .str15 {stroke:#BDBFC1;stroke-width:6.96;stroke-miterlimit:2.61313}
+    .str8 {stroke:white;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str2 {stroke:#D2D4D5;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str18 {stroke:#858789;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str5 {stroke:#4C4B4D;stroke-width:12;stroke-linejoin:round;stroke-miterlimit:2.61313}
+    .str9 {stroke:#373535;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str1 {stroke:#6F9C5C;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str4 {stroke:#557B4B;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str3 {stroke:#999999;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str19 {stroke:white;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .str0 {stroke:white;stroke-width:20.89;stroke-linejoin:round;stroke-miterlimit:2.61313}
+    .str11 {stroke:white;stroke-width:6.96;stroke-linecap:square;stroke-miterlimit:2.61313}
+    .str20 {stroke:white;stroke-width:6.96;stroke-linecap:square;stroke-miterlimit:2.61313}
+    .str14 {stroke:white;stroke-width:9.5;stroke-miterlimit:2.61313}
+    .str16 {stroke:white;stroke-width:6.96;stroke-miterlimit:2.61313}
+    .str10 {stroke:#9A8D89;stroke-width:3.01;stroke-miterlimit:2.61313}
+    .fil0 {fill:none}
+    .fil7 {fill:none;fill-rule:nonzero}
+    .fil8 {fill:none}
+    .fil13 {fill:white}
+    .fil14 {fill:#D2D4D5}
+    .fil28 {fill:#858789}
+    .fil30 {fill:#4C4B4D}
+    .fil33 {fill:#373535}
+    .fil20 {fill:#985B37}
+    .fil18 {fill:#5A2A42}
+    .fil31 {fill:#6F9C5C}
+    .fil16 {fill:#78889B}
+    .fil21 {fill:#6D9A7A}
+    .fil17 {fill:#445567}
+    .fil19 {fill:#2B7288}
+    .fil15 {fill:#10666A}
+    .fil32 {fill:#993400}
+    .fil29 {fill:white}
+    .fil9 {fill:white}
+    .fil4 {fill:#D2D4D5}
+    .fil2 {fill:#D2D4D5}
+    .fil12 {fill:#4C4B4D}
+    .fil6 {fill:#4C4B4D}
+    .fil10 {fill:#9A8D89}
+    .fil27 {fill:#776037}
+    .fil1 {fill:#6F9C5C}
+    .fil5 {fill:#557B4B}
+    .fil23 {fill:#78889B}
+    .fil25 {fill:#6D9A7A}
+    .fil22 {fill:#445567}
+    .fil24 {fill:#2B7288}
+    .fil26 {fill:#1D5C4D}
+    .fil3 {fill:#999999}
+    .fil11 {fill:white;fill-rule:nonzero}
+    .fnt0 {font-size:51.02px;font-weight:700;font-family:'Franklin Gothic Medium','Franklin Gothic','Libre Franklin',Arial,sans-serif;text-transform:uppercase}
+    .fnt1 {font-size:65.62px;font-weight:700;font-family:'Franklin Gothic Medium','Franklin Gothic','Libre Franklin',Arial,sans-serif;text-transform:uppercase}
+    .fnt6 {font-weight:bold;font-size:94.98px;font-family:'Arial'}
+    .fnt4 {font-weight:bold;font-size:94.99px;font-family:'Arial'}
+    .fnt2 {font-size:98.64px;font-weight:700;font-family:'Franklin Gothic Medium','Franklin Gothic','Libre Franklin',Arial,sans-serif;text-transform:uppercase}
+    .fnt5 {font-weight:bold;font-size:127.52px;font-family:'Arial'}
+    .fnt3 {font-weight:bold;font-size:127.52px;font-family:'Arial'}
+    .fnt7 {font-style:italic;font-weight:normal;font-size:71.34px;font-family:'Arial'}
+   
+  ]]></style></defs><g id="Layer_x0020_2"><g><polygon class="fil1 str1" points="7782.23,10.44 3879.85,10.44 3571.3,295.18 3553.53,313.99 3538.52,335.06 3526.54,357.98 3524.07,364.87 3609.53,364.85 3609.53,690.46 3625.3,701.66 3642.46,710.59 3660.67,717.1 3679.61,721.05 3698.91,722.37 3764.52,722.37 3861.6,722.37 3881.35,722.37 3924.47,722.37 4027.96,722.37 4075.01,722.37 4176.93,722.37 4178.5,722.37 4225.54,722.37 4329.04,722.37 4376.08,722.37 4459.93,722.37 4479.57,722.37 4526.62,722.37 4630.11,722.37 4677.15,722.37 4780.64,722.37 4827.69,722.37 4832,722.37 4987.64,722.37 5119.6,722.37 5275.24,722.37 5279.55,722.37 5383.05,722.37 5430.09,722.37 5434.4,722.37 5533.58,722.37 5580.62,722.37 5617.11,722.37 5684.12,722.37 5731.16,722.37 5735.48,722.37 5834.65,722.37 5881.7,722.37 5955.35,722.37 5985.19,721.49 5997,721.14 6032.24,718.01 6038.51,717.45 6079.72,711.33 6116.76,703.55 6135.73,699.58 6177.61,690.8 6182.77,690.03 6235.31,682.22 6293.42,677.05 6351.74,675.33 6474.44,675.33 6634.38,675.33 6737.88,675.33 6784.92,675.33 6888.42,675.33 6935.46,675.33 7038.95,675.33 7086,675.33 7189.49,675.33 7236.53,675.33 7340.03,675.33 7387.07,675.33 7391.38,675.33 7490.57,675.33 7537.61,675.33 7541.92,675.33 7697.55,675.33 7769.17,675.33 7775.07,664.29 7780.43,646.64 7782.23,628.29 "/><path class="fil1 str1" d="M1764.85 1561.36c-77.6,45.58 -99.23,108.5 -64.89,188.74l180.53 367.91c39.94,57.17 94.77,76.81 164.48,58.92l334.1 -160.38c103.23,-21.64 165.01,18.06 185.34,119.1l0.96 272.83c10.44,83.64 60.22,128.23 149.35,133.74l377.61 -0.73c87.52,-4.58 136.04,-51.37 145.55,-140.4l0 -465.02 -0.03 -1.6c-23.19,-25.39 -56.89,-40.54 -101.11,-45.44l-383.48 0c-171.85,-10.5 -296.5,-89.79 -373.97,-237.86l-149.17 -306.01 -164.94 80.41 -4.14 -8.49 -0.04 -0.08 -296.16 144.37z"/></g><path class="fil1 str1" d="M2645.14 430.71l0 1081.99c6.23,77.26 47.21,122.74 122.94,136.42l352.8 0c69.47,-4.03 121.01,-23.75 154.64,-59.17l0 -1300.37 0 -4.71 -34.4 0 -452.61 0c-90.18,9.92 -137.97,58.53 -143.36,145.83z"/><polygon class="fil2 str2" points="3048.97,2058.53 3048.97,1880.81 3146.15,1880.81 3146.15,2058.53 "/><polygon class="fil2 str2" points="2879.61,2058.53 2879.61,1879.99 2976.8,1879.99 2976.8,2058.53 "/><polygon class="fil2 str2" points="2729.08,2058.53 2729.08,1884.17 2826.26,1884.17 2826.26,2058.53 "/><polygon class="fil2 str2" points="2270.34,1848.09 2499.34,1736.4 2544.86,1829.71 2315.85,1941.41 "/><polygon class="fil2 str2" points="2197.87,1695.01 2367.12,1612.46 2412.64,1705.78 2243.38,1788.33 "/><polygon class="fil2 str2" points="2131.59,1559.84 2300.85,1477.29 2346.36,1570.61 2177.11,1653.16 "/><polygon class="fil2 str2" points="3275.52,1418.61 3102.12,1418.61 3102.12,1314.79 3275.52,1314.79 "/><polygon class="fil2 str2" points="3275.52,1587.97 3101.99,1587.97 3101.99,1484.14 3275.52,1484.14 "/><polygon class="fil2 str2" points="3275.52,1117.53 3102.12,1117.53 3102.12,1013.71 3275.52,1013.71 "/><polygon class="fil2 str2" points="3275.52,1268.07 3101.99,1268.07 3101.99,1164.25 3275.52,1164.25 "/><polygon class="fil2 str2" points="3275.52,816.46 3102.12,816.46 3102.12,712.64 3275.52,712.64 "/><polygon class="fil2 str2" points="3275.52,967 3101.99,967 3101.99,863.17 3275.52,863.17 "/><polygon class="fil2 str2" points="3275.52,515.39 3102.12,515.39 3102.12,411.56 3275.52,411.56 "/><polygon class="fil2 str2" points="3275.52,665.92 3101.99,665.92 3101.99,562.1 3275.52,562.1 "/><path class="fil1 str1" d="M3510.74 1145.27l0 473.35 0 39.58 0 564.57 1.61 24.56 4.8 24.14 8.33 29.2 19.43 32.74 26.32 30.58 23.58 16.67 32.57 14.8 39.46 12.59 32.06 2.89c705.09,3.58 1412.1,1.95 2117.26,0l38.48 0 55.01 -1.95 57.04 -6.73 46.71 -8.48 103.83 -30.51 33.5 -13.01 45.92 -21.51 44.37 -24.55 49.2 -27.47 50.76 -24.47 52.13 -21.39 53.32 -18.23 54.31 -15 60.09 -12.48 54.71 -8.01 108.47 -6.39 42.07 0c275.98,0 551.97,0 827.95,0l25.11 -1.68 24.66 -5.01 23.76 -8.26 22.45 -11.36 20.74 -14.25 18.65 -16.89 16.23 -19.23 13.52 -21.22 10.57 -22.84 7.42 -24.04 5.33 -32.23 0.91 -13.26 -179.93 0 0 -79.97 0 -79.98 0 -9.34 0 -25.93 0 -44.71 0 -79.97 0 -79.98 0 -79.97 0 -79.97 0 -79.98 0 -79.97 0 -79.97 0 -79.97 180.09 0 -1.18 -13.1 -1.07 -7.57 -4.15 -24.82 -7.42 -24.04 -10.57 -22.83 -13.52 -21.22 -16.23 -19.23 -18.65 -16.89 -20.74 -14.25 -22.45 -11.36 -23.76 -8.26 -24.66 -5.02 -25.11 -1.68c-432.77,0 -865.61,-0.88 -1298.38,0.28l-37.63 1.27 -37.63 3.35 -4.03 0.35 -43.96 6.54 -43.5 9.13 -54.38 11.4 -54.96 8.17 -55.35 4.92 -50.74 1.5 -50.61 0 0 0.14 -46.71 0 -103.83 0 -46.71 0 0 -0.14 -103.82 0 0 0.14 -46.72 0 -103.82 0 -46.71 0 0 -0.14 -103.82 0 0 0.14 -46.71 0 -103.83 0 -65.53 0 0 -0.14 -103.83 0 0 0.17 -112.78 -0.02 -2.14 0 -63.51 0 0 -0.07 -103.82 0 0 0.07 -46.71 0 0 -0.14 -103.83 0 0 0.14 -46.71 0 -103.82 0 -46.71 0 0 -0.14 -103.83 0 0 0.14 -46.71 0 -103.82 0 -46.71 0 0 -0.14 -103.83 0 0 0.14 -46.71 0 -103.82 0 -56.45 0 -20.61 1.79 -24.24 5.57 -29.29 9.91 -24.43 12.11 -9.21 5.46 -5.18 3.52 -5.14 3.65 -14.79 12.94 -0.84 0.96 -15.38 17.5 -13.69 20.41 -10.91 22.03 -7.95 23.25 -4.85 24.09 -1.67 24.52z"/><polygon class="fil2 str2" points="5110.2,1145.9 5110.2,938.26 5214.02,938.26 5214.02,1145.9 "/><polygon class="fil2 str2" points="5411.27,1145.9 5411.27,947.58 5515.1,947.58 5515.1,1145.9 "/><polygon class="fil2 str2" points="5260.74,1145.76 5260.74,920.56 5364.56,920.56 5364.56,1145.76 "/><polygon class="fil2 str2" points="5712.34,1145.9 5712.34,940.88 5816.17,940.88 5816.17,1145.9 "/><polygon class="fil2 str2" points="5561.81,1145.76 5561.81,940.88 5665.64,940.88 5665.64,1145.76 "/><polygon class="fil2 str2" points="6013.42,1145.9 6013.42,899.48 6117.25,899.48 6117.25,1145.9 "/><polygon class="fil2 str2" points="5862.88,1145.76 5862.88,937.71 5966.71,937.71 5966.71,1145.76 "/><polygon class="fil2 str2" points="4940.84,1145.76 4940.84,920.56 5044.67,920.56 5044.67,1145.76 "/><polygon class="fil2 str2" points="3755.36,1145.9 3755.36,910.55 3859.18,910.55 3859.18,1145.9 "/><polygon class="fil2 str2" points="3586,1145.76 3586,919.81 3689.83,919.81 3689.83,1145.76 "/><polygon class="fil2 str2" points="4056.44,1145.9 4056.44,932.96 4160.26,932.96 4160.26,1145.9 "/><polygon class="fil2 str2" points="3905.9,1145.76 3905.9,957.44 4009.72,957.44 4009.72,1145.76 "/><polygon class="fil2 str2" points="4357.51,1145.9 4357.51,920.56 4461.33,920.56 4461.33,1145.9 "/><polygon class="fil2 str2" points="4206.97,1145.76 4206.97,942.38 4310.8,942.38 4310.8,1145.76 "/><polygon class="fil2 str2" points="4658.59,1145.83 4658.59,936.49 4762.41,936.49 4762.41,1145.83 "/><polygon class="fil2 str2" points="4508.05,1145.76 4508.05,942.38 4611.87,942.38 4611.87,1145.76 "/><polygon class="fil2 str2" points="6465.03,1087.44 6465.03,891.27 6568.86,891.27 6568.86,1087.44 "/><polygon class="fil2 str2" points="6295.68,1087.3 6295.68,885.1 6399.5,885.1 6399.5,1087.3 "/><polygon class="fil2 str2" points="6766.11,1087.44 6766.11,882.41 6869.93,882.41 6869.93,1087.44 "/><polygon class="fil2 str2" points="6615.57,1087.3 6615.57,872.75 6719.39,872.75 6719.39,1087.3 "/><polygon class="fil2 str2" points="7067.18,1087.44 7067.18,888.63 7171,888.63 7171,1087.44 "/><polygon class="fil2 str2" points="6916.64,1087.3 6916.64,895.29 7020.47,895.29 7020.47,1087.3 "/><polygon class="fil2 str2" points="7368.26,1087.44 7368.26,884.41 7472.08,884.41 7472.08,1087.44 "/><polygon class="fil2 str2" points="7217.72,1087.3 7217.72,886.52 7321.54,886.52 7321.54,1087.3 "/><polygon class="fil2 str2" points="6465.03,2240.96 6465.03,1996.86 6568.86,1996.86 6568.86,2240.96 "/><polygon class="fil2 str2" points="6295.68,2293.57 6295.68,1996.71 6399.5,1996.71 6399.5,2293.57 "/><polygon class="fil2 str2" points="6766.11,2184.49 6766.11,1996.86 6869.93,1996.86 6869.93,2184.49 "/><polygon class="fil2 str2" points="6615.57,2196.31 6615.57,1996.71 6719.39,1996.71 6719.39,2196.31 "/><polygon class="fil2 str2" points="7067.18,2184.49 7067.18,1996.86 7171,1996.86 7171,2184.49 "/><polygon class="fil2 str2" points="6916.64,2186.46 6916.64,1996.71 7020.47,1996.71 7020.47,2186.46 "/><polygon class="fil2 str2" points="7368.26,2170.77 7368.26,1996.86 7472.08,1996.86 7472.08,2170.77 "/><polygon class="fil2 str2" points="7217.72,2204.18 7217.72,1996.71 7321.54,1996.71 7321.54,2204.18 "/><polygon class="fil2 str2" points="5110.2,2437.5 5110.2,2222.92 5214.02,2222.92 5214.02,2437.5 "/><polygon class="fil2 str2" points="4940.84,2425.23 4940.84,2222.79 5044.67,2222.79 5044.67,2425.23 "/><polygon class="fil2 str2" points="5411.27,2458 5411.27,2222.93 5515.1,2222.93 5515.1,2458 "/><polygon class="fil2 str2" points="5260.54,2441.01 5260.54,2211.8 5364.36,2211.8 5364.36,2441.01 "/><polygon class="fil2 str2" points="5712.34,2432.44 5712.34,2222.92 5816.17,2222.92 5816.17,2432.44 "/><polygon class="fil2 str2" points="5561.81,2430.39 5561.81,2222.79 5665.64,2222.79 5665.64,2430.39 "/><polygon class="fil2 str2" points="6013.42,2393.94 6013.42,2222.92 6117.25,2222.92 6117.25,2393.94 "/><polygon class="fil2 str2" points="5862.88,2431.42 5862.88,2222.79 5966.71,2222.79 5966.71,2431.42 "/><polygon class="fil2 str2" points="3755.36,2411.48 3755.36,2222.92 3859.18,2222.92 3859.18,2411.48 "/><polygon class="fil2 str2" points="3586,2447.31 3586,2222.78 3689.83,2222.78 3689.83,2447.31 "/><polygon class="fil2 str2" points="4056.44,2412.51 4056.44,2222.92 4160.26,2222.92 4160.26,2412.51 "/><polygon class="fil2 str2" points="3905.9,2429.44 3905.9,2222.79 4009.72,2222.79 4009.72,2429.44 "/><polygon class="fil2 str2" points="4357.51,2440.49 4357.51,2222.92 4461.33,2222.92 4461.33,2440.49 "/><polygon class="fil2 str2" points="4206.97,2432.2 4206.97,2222.79 4310.8,2222.79 4310.8,2432.2 "/><polygon class="fil2 str2" points="4658.59,2426.26 4658.59,2222.92 4762.41,2222.92 4762.41,2426.26 "/><polygon class="fil2 str2" points="4508.05,2427.84 4508.05,2222.79 4611.87,2222.79 4611.87,2427.84 "/><path class="fil3 str3" d="M2503.07 1802.26l0.22 0.16 -0.22 -0.16zm723.09 731.14l-216.05 247.81 52.65 33.8 217.6 -249.95c26.48,-32.48 40.43,-70.03 41.86,-112.63l0.34 -417.86c-9.11,-119.38 -73.77,-183.56 -193.98,-192.58l-372.83 -0.19c-149.12,-7.55 -258.93,-75.08 -329.43,-202.58l-153.91 -314.67 -42.29 20.61 111.08 227.86 20.63 42.28 17.96 36.77 0.28 0.52 8.93 16.35c19.01,33.32 40.61,62.88 64.8,88.68l15.43 15.61c2.09,2.01 4.2,3.99 6.33,5.94l27.38 22.98 0.13 0.11c0.07,0.06 0.15,0.11 0.22,0.15l30.7 21.23c1.19,0.74 2.39,1.48 3.59,2.21l23.72 13.33c52.41,27.14 112.25,43.46 179.51,48.95l19.06 0.88 66.39 0 47.04 0 103.5 0 159.95 0c44.22,4.9 77.92,20.05 101.11,45.44 22.12,24.22 27.88,57.78 30.87,100.65l0 411.64c-0.62,35.05 -19.11,58.82 -42.56,86.64z"/><polygon class="fil2 str2" points="3925.08,741.47 3925.08,553.16 4028.9,553.16 4028.9,741.47 "/><polygon class="fil2 str2" points="3755.72,741.34 3755.72,553.02 3859.55,553.02 3859.55,741.34 "/><polygon class="fil2 str2" points="4226.15,741.47 4226.15,553.16 4329.98,553.16 4329.98,741.47 "/><polygon class="fil2 str2" points="4075.61,741.34 4075.61,553.02 4179.44,553.02 4179.44,741.34 "/><polygon class="fil2 str2" points="4527.23,741.47 4527.23,553.16 4631.05,553.16 4631.05,741.47 "/><polygon class="fil2 str2" points="4376.69,741.34 4376.69,553.02 4480.52,553.02 4480.52,741.34 "/><polygon class="fil2 str2" points="4828.3,741.47 4828.3,553.16 4932.12,553.16 4932.12,741.47 "/><polygon class="fil2 str2" points="4677.76,741.34 4677.76,553.02 4781.59,553.02 4781.59,741.34 "/><polygon class="fil2 str2" points="5279.55,740.44 5279.55,552.13 5383.38,552.13 5383.38,740.44 "/><polygon class="fil2 str2" points="5110.19,740.3 5110.19,551.98 5214.02,551.98 5214.02,740.3 "/><polygon class="fil2 str2" points="5580.63,740.44 5580.63,552.13 5684.45,552.13 5684.45,740.44 "/><polygon class="fil2 str2" points="5430.09,740.3 5430.09,551.98 5533.91,551.98 5533.91,740.3 "/><polygon class="fil2 str2" points="5881.7,740.44 5881.7,552.13 5985.52,552.13 5985.52,740.44 "/><polygon class="fil2 str2" points="5731.17,740.3 5731.17,551.98 5834.99,551.98 5834.99,740.3 "/><polygon class="fil2 str2" points="6032.24,740.3 6032.24,551.98 6136.06,551.98 6136.06,740.3 "/><polygon class="fil2 str2" points="6635.35,694.43 6635.35,506.12 6739.17,506.12 6739.17,694.43 "/><polygon class="fil2 str2" points="6465.99,694.29 6465.99,505.97 6569.82,505.97 6569.82,694.29 "/><polygon class="fil2 str2" points="6936.42,694.43 6936.42,506.12 7040.25,506.12 7040.25,694.43 "/><polygon class="fil2 str2" points="6785.88,694.29 6785.88,505.97 6889.71,505.97 6889.71,694.29 "/><polygon class="fil2 str2" points="7237.5,694.43 7237.5,506.12 7341.32,506.12 7341.32,694.43 "/><polygon class="fil2 str2" points="7086.96,694.29 7086.96,505.97 7190.79,505.97 7190.79,694.29 "/><polygon class="fil2 str2" points="7538.57,694.43 7538.57,506.12 7642.39,506.12 7642.39,694.43 "/><polygon class="fil2 str2" points="7388.04,694.29 7388.04,505.97 7491.86,505.97 7491.86,694.29 "/><polygon class="fil2 str2" points="6182.77,707.57 6182.77,552.13 6286.6,552.13 6286.6,707.57 "/><path class="fil1 str1" d="M5854.9 2646.17c-710.38,0 -1420.77,0 -2131.16,0l-2.51 0.18 -16.98 1.21 -0.52 0.04 -0.34 0.07 -18.65 4.05 -0.62 0.13 -0.52 0.19 -15.64 5.81 -2.66 0.99 -17.62 9.58 -16.09 11.99 -14.23 14.15 -279.29 320.35 13.03 10.03 99.09 80.94 96.71 83.77 94.25 86.53 29.39 28.59 3063.7 0 0 -788.92 1929.07 0 0 -2505.41 -645.86 0c0,798.52 0,1597.03 0,2395.54l-1293.16 0 -47.51 1.6 -47.3 4.8 -46.87 7.97 -12.09 2.59 -15.05 3.53 -14.97 3.86 -14.89 4.19 -14.79 4.51 -21.04 7.09 -22.69 8.38 -28.54 11.91 -34.91 16.62 -41.6 23.02 -0.5 0.28 -51.16 28.56 -0.56 0.27 -52.73 25.42 -54.74 22.46 -1.26 0.43 -54.73 18.71 -0.4 0.11 -56.63 15.65 -57.86 12.31 -0.68 0.1 -53.01 8 -4.81 0.73 -3.55 0.32 -55.38 4.99 -59.14 1.77z"/><path class="fil4 str2" d="M8663.31 2515.85l-1929.07 0 0 788.92 -3063.7 0 62.32 60.63c27.24,29.01 53.26,58.87 78.08,89.57l5002.58 0 0 -3444.53 -150.2 0 0 2505.41z"/><polygon class="fil2 str2" points="8186.8,2337.06 7998.48,2337.06 7998.48,2233.23 8186.8,2233.23 "/><polygon class="fil2 str2" points="8186.8,2035.98 7998.48,2035.98 7998.48,1932.16 8186.8,1932.16 "/><polygon class="fil2 str2" points="8186.66,2186.52 7998.34,2186.52 7998.34,2082.69 8186.66,2082.69 "/><polygon class="fil2 str2" points="8186.8,1734.91 7998.48,1734.91 7998.48,1631.09 8186.8,1631.09 "/><polygon class="fil2 str2" points="8186.66,1885.45 7998.34,1885.45 7998.34,1781.62 8186.66,1781.62 "/><polygon class="fil2 str2" points="8186.8,1433.83 7998.48,1433.83 7998.48,1330.01 8186.8,1330.01 "/><polygon class="fil2 str2" points="8186.66,1584.37 7998.34,1584.37 7998.34,1480.55 8186.66,1480.55 "/><polygon class="fil2 str2" points="8186.8,1127.36 7998.48,1127.36 7998.48,1023.53 8186.8,1023.53 "/><polygon class="fil2 str2" points="8186.8,826.28 7998.48,826.28 7998.48,722.46 8186.8,722.46 "/><polygon class="fil2 str2" points="8186.66,976.82 7998.34,976.82 7998.34,872.99 8186.66,872.99 "/><polygon class="fil2 str2" points="8186.8,525.21 7998.48,525.21 7998.48,421.39 8186.8,421.39 "/><polygon class="fil2 str2" points="8186.66,675.75 7998.34,675.75 7998.34,571.92 8186.66,571.92 "/><polygon class="fil2 str2" points="8186.8,224.13 7998.48,224.13 7998.48,120.31 8186.8,120.31 "/><polygon class="fil2 str2" points="8186.66,374.67 7998.34,374.67 7998.34,270.85 8186.66,270.85 "/><polygon class="fil2 str2" points="3827.91,2828.26 3827.91,2639.94 3931.73,2639.94 3931.73,2828.26 "/><polygon class="fil2 str2" points="3658.55,2828.11 3658.55,2639.8 3762.38,2639.8 3762.38,2828.11 "/><polygon class="fil2 str2" points="4128.99,2828.26 4128.99,2639.94 4232.81,2639.94 4232.81,2828.26 "/><polygon class="fil2 str2" points="3978.45,2828.11 3978.45,2639.8 4082.27,2639.8 4082.27,2828.11 "/><polygon class="fil2 str2" points="4430.06,2828.26 4430.06,2639.94 4533.88,2639.94 4533.88,2828.26 "/><polygon class="fil2 str2" points="4279.52,2828.11 4279.52,2639.8 4383.35,2639.8 4383.35,2828.11 "/><polygon class="fil2 str2" points="4731.13,2828.26 4731.13,2639.94 4834.96,2639.94 4834.96,2828.26 "/><polygon class="fil2 str2" points="4580.6,2828.11 4580.6,2639.8 4684.42,2639.8 4684.42,2828.11 "/><polygon class="fil2 str2" points="4881.67,2828.11 4881.67,2639.8 4985.5,2639.8 4985.5,2828.11 "/><polygon class="fil2 str2" points="5356.8,2828.26 5356.8,2639.94 5460.63,2639.94 5460.63,2828.26 "/><polygon class="fil2 str2" points="5187.45,2828.11 5187.45,2639.8 5291.27,2639.8 5291.27,2828.11 "/><polygon class="fil2 str2" points="5657.88,2828.26 5657.88,2639.94 5761.71,2639.94 5761.71,2828.26 "/><polygon class="fil2 str2" points="5507.34,2828.11 5507.34,2639.8 5611.17,2639.8 5611.17,2828.11 "/><polygon class="fil2 str2" points="5958.95,2828.26 5958.95,2616.1 6062.78,2616.1 6062.78,2828.26 "/><polygon class="fil2 str2" points="5808.42,2828.11 5808.42,2639.8 5912.24,2639.8 5912.24,2828.11 "/><path class="fil2 str2" d="M6260.03 2828.25l0 -290.23c0,-21.97 17.97,-39.94 39.94,-39.94l63.89 0 0 330.16 -103.82 0z"/><polygon class="fil2 str2" points="6109.49,2828.11 6109.49,2569.65 6213.31,2569.65 6213.31,2828.11 "/><polygon class="fil2 str2" points="6410.57,2828.11 6410.57,2434.11 6514.39,2434.11 6514.39,2828.11 "/><path class="fil5 str4" d="M3010.11 2781.22l216.05 -247.81c23.45,-27.82 41.94,-51.6 42.56,-86.64l0 -411.64c-2.99,-42.88 -8.74,-76.43 -30.87,-100.65l0.03 1.6 0 465.02c-9.51,89.02 -58.03,135.82 -145.55,140.4l-377.61 0.73c-89.13,-5.52 -138.91,-50.1 -149.35,-133.74l-0.96 -272.83c-20.33,-101.03 -82.11,-140.73 -185.34,-119.1l-334.1 160.38c-69.71,17.89 -124.54,-1.76 -164.48,-58.92l-180.53 -367.91c-34.35,-80.24 -12.72,-143.16 64.89,-188.74l296.16 -144.37 -33.14 -67.97 -35.04 -71.89 -36.88 -75.65 166.03 -81.01 -6.71 -13.9 -12.91 -26.74 -0.89 -1.8 41.01 -19.99 173.28 -84.47 14.43 29.6 6.15 12.73 169.23 -82.52 37.16 76.09 72.22 147.89 -155.37 75.87c-8.98,4.86 -11.29,11.83 -6.9,20.94l49.52 101.6 79.32 162.72c32.8,83.87 94.98,127.41 186.57,130.63 -75.73,-13.69 -116.72,-59.16 -122.94,-136.42l0 -1081.99c5.39,-87.3 53.18,-135.91 143.36,-145.83l452.61 0 34.4 0c3.39,-24.78 17.81,-47.9 39.11,-71.9l106.78 -98.95 111.77 -103.58 -536.2 0c-29.48,38.53 -70.34,72.16 -107.59,100.89l-84.45 60.67 -86.07 58.36 -87.62 56 -89.1 53.6 -90.53 51.17 -91.88 48.69 -93.17 46.18 -1448.3 707.26 -30.13 16.63 -28.32 19.56 -26.21 22.3 -23.85 24.81 -21.24 27.07 -18.43 29.06 -15.43 30.77 -12.27 32.16 -8.99 33.22 -5.62 33.96 -2.19 34.34 1.25 34.39 4.69 34.1 8.08 33.45 11.39 32.47 14.58 31.18 17.63 29.56 20.49 27.65 23.16 25.46 25.59 23.01 27.77 20.33 29.66 17.45 31.26 14.39 1407.18 564.26 118.06 49.33 116.58 52.72 115.01 56.08 113.34 59.37 111.58 62.62 109.72 65.83 77.51 50.43z"/><path class="fil6 str5" d="M3624.42 2445.89l-8.92 -3.18 -8.79 -3.53 -8.64 -3.89 -8.47 -4.23 -8.3 -4.57 -8.11 -4.9 -7.9 -5.22 -7.69 -5.54 -7.46 -5.84 -7.22 -6.14 -6.96 -6.42 -6.7 -6.7 -6.42 -6.96 -6.14 -7.22 -5.84 -7.46 -5.54 -7.69 -5.22 -7.91 -4.9 -8.1 -4.57 -8.3 -4.24 -8.47 -3.89 -8.64 -3.54 -8.79 -3.18 -8.92 -2.82 -9.04 -2.45 -9.15 -2.08 -9.24 -1.71 -9.32 -1.33 -9.37 -0.95 -9.43 -0.57 -9.45 -0.19 -9.47 0 -1077.56 0.21 -9.46 0.59 -9.44 0.97 -9.41 1.35 -9.36 1.72 -9.3 2.1 -9.22 2.47 -9.13 2.83 -9.03 3.19 -8.91 3.54 -8.77 3.9 -8.62 4.24 -8.46 4.57 -8.28 4.91 -8.08 5.23 -7.88 5.54 -7.67 5.84 -7.44 6.14 -7.2 6.42 -6.94 6.7 -6.68 6.96 -6.41 7.21 -6.12 7.45 -5.83 7.68 -5.52 7.89 -5.21 8.1 -4.88 8.29 -4.56 8.47 -4.22 8.62 -3.88 8.77 -3.53 8.92 -3.17 9.03 -2.81 9.14 -2.45 9.22 -2.08 9.31 -1.7 9.37 -1.33 9.41 -0.95 9.44 -0.57 9.46 -0.19 2209.79 0 17.6 -0.17 17.59 -0.52 17.58 -0.86 17.55 -1.21 17.53 -1.56 17.49 -1.9 17.45 -2.25 17.41 -2.59 17.35 -2.93 17.29 -3.28 17.22 -3.61 17.15 -3.95 16.74 -3.84 16.82 -3.48 16.89 -3.12 16.95 -2.76 17.01 -2.39 17.06 -2.02 17.1 -1.66 17.13 -1.29 17.15 -0.92 17.17 -0.56 17.17 -0.18 1288.97 0 9.47 0.19 9.45 0.57 9.42 0.96 9.38 1.33 9.32 1.71 9.24 2.08 9.15 2.45 9.04 2.81 8.92 3.19 8.79 3.53 8.64 3.89 8.47 4.23 8.3 4.57 8.11 4.9 7.9 5.22 7.69 5.53 7.46 5.85 7.22 6.14 6.96 6.42 6.7 6.7 6.43 6.96 6.13 7.22 5.84 7.46 5.54 7.69 5.23 7.91 4.9 8.1 4.57 8.3 4.23 8.47 3.89 8.64 3.54 8.79 3.18 8.92 2.82 9.04 2.45 9.15 2.08 9.24 1.71 9.32 1.33 9.38 0.95 9.42 0.57 9.46 0.19 11.56 -45.72 0 -180.09 0 0 79.97 0 79.97 0 79.97 0 79.98 0 79.97 0 79.97 0 79.98 0 79.97 0 44.71 0 25.93 0 9.34 0 79.98 0 79.97 179.93 0 45.88 0 -0.19 11.57 -0.57 9.45 -0.95 9.42 -1.33 9.38 -1.71 9.32 -2.08 9.24 -2.45 9.15 -2.82 9.04 -3.18 8.92 -3.54 8.79 -3.89 8.63 -4.23 8.48 -4.57 8.3 -4.9 8.11 -5.23 7.9 -5.54 7.69 -5.84 7.46 -6.13 7.22 -6.43 6.96 -6.7 6.7 -6.96 6.42 -7.22 6.14 -7.46 5.84 -7.69 5.54 -7.9 5.23 -8.11 4.89 -8.3 4.57 -8.47 4.24 -8.64 3.89 -8.79 3.54 -8.92 3.18 -9.04 2.82 -9.15 2.45 -9.24 2.08 -9.32 1.71 -9.38 1.33 -9.42 0.95 -9.45 0.58 -9.47 0.19 -870.02 0 -18.53 0.19 -18.52 0.58 -18.51 0.96 -18.49 1.35 -18.45 1.73 -18.41 2.11 -18.36 2.49 -18.31 2.87 -18.24 3.25 -18.18 3.62 -18.09 4 -18.01 4.38 -17.91 4.75 -17.81 5.12 -17.7 5.49 -17.59 5.86 -17.46 6.21 -17.32 6.58 -17.19 6.94 -17.04 7.29 -16.88 7.65 -16.72 7.99 -16.55 8.33 -16.37 8.68 -16.2 9.02 -16 9.34 -14.89 8.7 -15.08 8.37 -15.25 8.04 -15.43 7.71 -15.58 7.38 -15.75 7.04 -15.89 6.7 -16.03 6.36 -16.16 6.01 -16.29 5.66 -16.41 5.31 -16.52 4.95 -16.62 4.59 -16.72 4.23 -16.8 3.87 -16.88 3.51 -16.96 3.14 -17.02 2.78 -17.08 2.41 -17.12 2.04 -17.17 1.67 -17.19 1.3 -17.22 0.93 -17.23 0.56 -17.25 0.19 -2155.74 0 -9.47 -0.19 -9.46 -0.57 -9.42 -0.96 -9.38 -1.33 -9.32 -1.71 -9.24 -2.08 -9.15 -2.45 -9.04 -2.82zm2681.57 -1721.88l-55.34 4.92 -54.96 8.17 -54.38 11.4 -43.5 9.12 -43.97 6.54 -44.28 3.93 -44.43 1.31 -2266.24 0 -24.56 -1.61 -24.14 -4.8 -23.31 -7.91 -22.07 -10.89 -20.47 -13.67 -15.54 -13.63 -4.54 -4.82 -5.61 -5.96 -4.95 -5.64 -2.17 -2.47 -3.52 -4.99 -5.32 -7.55 -6.76 -10.12 -10.89 -22.08 -7.91 -23.31 -4.8 -24.14 -1.61 -24.56 0 -147.77 1.78 -25.81 5.3 -25.32 6.26 -17.47 2.47 -6.88 11.98 -22.93 15.02 -21.07 17.76 -18.81 308.55 -284.74 -277.47 0 -102.44 94.53c-51.05,47.64 -108.17,99.83 -150.62,139 -9.18,8.47 -13.84,16.93 -19.33,28.14 -4.11,8.4 -7.03,18.5 -7.43,33.41l0 1157.12c-1.93,46.59 -14.17,92.76 -47.04,127.31 -33.63,35.42 -85.17,55.14 -154.64,59.17l-352.8 0c-91.58,-3.22 -153.77,-46.77 -186.57,-130.63l-79.32 -162.72 -49.52 -101.6c-4.38,-9.11 -2.08,-16.09 6.9,-20.94l155.37 -75.87 -72.22 -147.89 -37.15 -76.09 -153.16 74.66 -16.07 7.86 -6.15 -12.73 -14.59 -30.19 -173.28 84.47 -41.1 20.04 20.75 42.98 -166.03 81.01 36.88 75.65 35.04 71.89 33.14 67.97 0.04 0.08 4.14 8.49 164.94 -80.41 42.29 -20.61 153.91 314.67c20.83,37.66 45.08,70.1 72.77,97.29l0.25 -0.12 0.34 0.7c65.96,64.5 151.31,99.4 256.07,104.7l372.83 0.19c120.2,9.02 184.86,73.2 193.98,192.58l-0.34 417.86c-1.42,42.6 -15.38,80.15 -41.86,112.63l-217.6 249.95 83.34 56.79 103.61 75.08 52.23 40.2 279.97 -323.45 16.1 -16.34 17.96 -14.26 19.57 -11.97 20.88 -9.5 21.88 -6.88 22.56 -4.17 22.89 -1.4 2131.16 0 56.32 -1.69 56.12 -5.06 55.71 -8.4 55.11 -11.73 54.32 -15 53.32 -18.23 52.13 -21.39 50.76 -24.47 49.2 -27.47 44.38 -24.54 45.92 -21.51 47.27 -18.37 48.4 -15.14 49.31 -11.85 49.99 -8.5 50.45 -5.12 50.68 -1.71 1246.12 0 0 -2229.31 0 -119.19 -188.17 0 0 617.84 -1.81 18.36 -5.36 17.65 -5.9 11.03 -2.79 5.23 -11.7 14.26 -14.25 11.7 -16.27 8.7 -17.65 5.35 -18.36 1.81 -1326.61 0 -55.54 1.64z"/><polygon class="fil3 str3" points="3609.53,690.46 3609.53,364.85 3524.07,364.87 3517.81,382.34 3512.52,407.66 3510.74,433.47 3510.74,581.24 3512.35,605.81 3517.15,629.94 3525.06,653.25 3535.95,675.33 3542.71,685.45 3551.55,697.99 3558.67,706.11 3568.81,716.9 3584.35,730.53 3604.82,744.2 3626.9,755.09 3650.2,763.01 3674.35,767.81 3698.91,769.42 5965.14,769.42 6009.58,768.1 6053.85,764.17 6097.82,757.63 6141.32,748.51 6195.7,737.1 6250.66,728.93 6306,724.01 6361.54,722.37 7688.14,722.37 7706.5,720.56 7724.15,715.21 7740.42,706.52 7754.67,694.82 7766.38,680.56 7769.17,675.33 7697.55,675.33 7541.92,675.33 7537.61,675.33 7490.57,675.33 7391.38,675.33 7387.07,675.33 7340.03,675.33 7236.53,675.33 7189.49,675.33 7086,675.33 7038.95,675.33 6935.46,675.33 6888.42,675.33 6784.92,675.33 6737.88,675.33 6634.38,675.33 6474.44,675.33 6351.74,675.33 6293.42,677.05 6235.31,682.22 6182.77,690.03 6177.61,690.8 6135.73,699.58 6116.76,703.55 6079.72,711.33 6038.51,717.45 6032.24,718.01 5997,721.14 5985.19,721.49 5955.35,722.37 5881.7,722.37 5834.65,722.37 5735.48,722.37 5731.16,722.37 5684.12,722.37 5617.11,722.37 5580.62,722.37 5533.58,722.37 5434.4,722.37 5430.09,722.37 5383.05,722.37 5279.55,722.37 5275.24,722.37 5119.6,722.37 4987.64,722.37 4832,722.37 4827.69,722.37 4780.64,722.37 4677.15,722.37 4630.11,722.37 4526.62,722.37 4479.57,722.37 4459.93,722.37 4376.08,722.37 4329.04,722.37 4225.54,722.37 4178.5,722.37 4176.93,722.37 4075.01,722.37 4027.96,722.37 3924.47,722.37 3881.35,722.37 3861.6,722.37 3764.52,722.37 3698.91,722.37 3679.61,721.05 3660.67,717.1 3642.46,710.59 3625.3,701.66 "/><path class="fil3 str3" d="M3338.08 3014.91l279.29 -320.35 14.23 -14.15 16.09 -11.99 17.62 -9.58 2.66 -0.99 0 -0.19 6.65 -2.67 6.78 -2.32 2.2 -0.64 0.52 -0.19 0.62 -0.13 3.54 -1.02 6.98 -1.62 7.05 -1.27 1.07 -0.14 0.34 -0.07 0.52 -0.04 5.18 -0.66 7.14 -0.54 4.67 -0 2.5 -0.18c710.39,0 1420.78,0 2131.16,0l59.14 -1.77 55.38 -4.99 8.36 -1.05 53.01 -8 58.55 -12.41 56.63 -15.65 55.13 -18.82 55.99 -22.89 52.73 -25.42 51.72 -28.83 42.1 -23.3 34.91 -16.62 28.54 -11.91 22.69 -8.38 21.04 -7.09 14.79 -4.51 14.89 -4.19 14.97 -3.86 15.05 -3.53 12.09 -2.59 46.87 -7.97 47.3 -4.8 47.51 -1.6 1293.16 0c0,-798.51 0,-1597.02 0,-2395.54l-47.04 0 0 2348.5 -1246.12 0 -50.68 1.71 -50.45 5.12 -49.99 8.5 -49.31 11.85 -48.4 15.14 -47.27 18.37 -45.92 21.51 -44.38 24.54 -49.2 27.47 -50.76 24.47 -52.13 21.39 -53.32 18.23 -54.32 15 -55.11 11.73 -55.71 8.4 -56.12 5.06 -56.32 1.69 -2131.16 0 -22.89 1.4 -22.56 4.17 -21.88 6.88 -20.88 9.5 -19.57 11.97 -17.96 14.26 -16.1 16.34 -281.19 322.51 37.36 28.76z"/><g><line class="fil7 str6" x1="7782.23" y1="1580.64" x2="7603.47" y2="1580.64"/><line class="fil7 str6" x1="7603.47" y1="1500.67" x2="7782.23" y2="1500.67"/><line class="fil7 str6" x1="7603.47" y1="1420.7" x2="7782.23" y2="1420.7"/><line class="fil7 str6" x1="7603.47" y1="1340.73" x2="7782.23" y2="1340.73"/><line class="fil7 str6" x1="7603.47" y1="1260.75" x2="7782.23" y2="1260.75"/><line class="fil7 str6" x1="7603.47" y1="1180.78" x2="7782.23" y2="1180.78"/><line class="fil7 str6" x1="7782.23" y1="1660.62" x2="7603.47" y2="1660.62"/><line class="fil7 str6" x1="7782.23" y1="1740.59" x2="7603.47" y2="1740.59"/><line class="fil7 str6" x1="7782.23" y1="1820.56" x2="7603.47" y2="1820.56"/><line class="fil7 str6" x1="7782.23" y1="1900.54" x2="7603.47" y2="1900.54"/></g><line class="fil8 str7" x1="2157.74" y1="1196.74" x2="1992.83" y2="1277.14"/><line class="fil8 str7" x1="2192.79" y1="1268.63" x2="2027.87" y2="1349.02"/><line class="fil8 str7" x1="2542.72" y1="1009.47" x2="2386.17" y2="1085.79"/><line class="fil8 str7" x1="2577.72" y1="1081.38" x2="2421.16" y2="1157.7"/><path class="fil3 str3" d="M3275.52 284.88l0 4.71 0 121.98 0 103.82 0 46.71 0 103.83 0 46.71 0 103.82 0 46.71 0 103.83 0 46.71 0 103.82 0 46.71 0 103.83 0 46.71 0 103.82 0 65.53 0 103.82 0 1.99c0.62,-0.66 1.24,-1.32 1.85,-1.99l0.88 0 0 -0.97c27.37,-30.41 42.13,-71.87 44.31,-124.35l0 -1157.12c0.22,-8.17 1.2,-14.9 2.71,-20.69l-49.75 0.04zm298.13 -247.92l28.73 -26.51 -68.48 0 -0.73 0 -28.58 26.48 69.05 0.03z"/><path class="fil9 str8" d="M2204.56 2494l-1407.18 -564.26 -37.22 -16.88 -35.59 -20.11 -33.66 -23.18 -31.48 -26.08 -29.04 -28.76 -26.38 -31.22 -23.52 -33.43 -20.46 -35.39 -17.25 -37.06 -13.9 -38.44 -10.43 -39.52 -6.9 -40.29 -3.3 -40.74 0.32 -40.87 3.94 -40.69 7.53 -40.18 11.06 -39.35 14.5 -38.22 17.83 -36.78 21.02 -35.06 24.04 -33.06 26.87 -30.8 29.49 -28.3 31.89 -25.57 34.02 -22.65 35.9 -19.55 1448.3 -707.25 107.18 -53.45 105.43 -56.81 103.59 -60.11 101.64 -63.35 99.6 -66.52 97.44 -69.64 -692.04 0 -125.4 60.05 -143.67 69.61 -130.84 59.94 -138.23 69.71 -1589.23 784.7 0 940.69 2065.25 837.35 144.58 67.75 142.63 71.86 140.56 75.91 138.38 79.9 136.08 83.83 133.68 87.68 131.17 91.48 121.79 101.21 121.79 119.85 495.68 0c-41.61,-55.71 -89.14,-117.97 -154.27,-186.77l-88.35 -84.53 -90.71 -81.99 -93 -79.4 -60.51 -48.78 -34.69 -27.96 -97.33 -74.01 -99.39 -71.23 -101.36 -68.39 -46.68 -29.61 -56.58 -35.89 -105.07 -62.55 -106.8 -59.55 -108.44 -56.51 -109.99 -53.42 -111.47 -50.28 -112.83 -47.11z"/><path class="fil6 str5" d="M766.67 1087.58l1448.3 -707.25 107.18 -53.45 105.43 -56.81 103.59 -60.11 101.64 -63.35 99.6 -66.52 97.44 -69.64 -692.04 0 -125.4 60.05 -143.67 69.61 -130.84 59.94 -138.23 69.71 -1589.23 784.7 0 940.69 2065.25 837.35 144.58 67.75 142.63 71.86 140.56 75.91 138.38 79.9 136.08 83.83 133.68 87.68 131.17 91.48 121.79 101.21 121.79 119.85 495.68 0c-41.61,-55.71 -89.14,-117.97 -154.27,-186.77l-88.35 -84.53 -90.71 -81.99 -93 -79.4 -60.51 -48.78 -34.69 -27.96 -97.33 -74.01 -99.39 -71.23 -101.36 -68.39 -46.68 -29.61 -56.58 -35.89 -105.07 -62.55 -106.8 -59.55 -108.44 -56.51 -109.99 -53.42 -111.47 -50.28 -112.83 -47.11 -1407.18 -564.26 -37.22 -16.88 -35.59 -20.11 -33.66 -23.18 -31.48 -26.08 -29.04 -28.76 -26.38 -31.22 -23.52 -33.43 -20.46 -35.39 -17.25 -37.06 -13.9 -38.44 -10.43 -39.52 -6.9 -40.29 -3.3 -40.74 0.32 -40.87 3.94 -40.69 7.53 -40.18 11.06 -39.35 14.5 -38.22 17.83 -36.78 21.02 -35.06 24.04 -33.06 26.87 -30.8 29.49 -28.3 31.89 -25.57 34.02 -22.65 35.9 -19.55z"/><polygon class="fil6 str5" points="1588.48,1029.2 1505,858.24 1346.86,935.46 1430.31,1106.35 "/><path class="fil3 str3" d="M2248.34 2384.84l-1407.18 -564.26 -31.26 -14.39 -29.66 -17.45 -27.77 -20.33 -25.59 -23.01 -23.16 -25.46 -20.49 -27.65 -17.63 -29.56 -14.58 -31.18 -11.39 -32.47 -8.08 -33.45 -4.69 -34.1 -1.25 -34.39 2.19 -34.34 5.62 -33.96 8.99 -33.22 12.27 -32.16 15.43 -30.77 18.43 -29.06 21.24 -27.07 23.85 -24.81 26.21 -22.3 28.32 -19.56 30.13 -16.63 1448.3 -707.26 93.17 -46.18 91.88 -48.69 90.53 -51.17 89.1 -53.6 87.62 -56 86.07 -58.36 84.45 -60.67c37.25,-28.73 78.11,-62.36 107.59,-100.89l-86.83 0c-19.17,18.87 -35.42,35.48 -55.33,49.85l-98.47 68.17 -100.33 65.4 -102.12 62.59 -103.81 59.72 -105.44 56.81 -106.98 53.85 -1448.3 707.25 -33.11 18.11 -31.3 21.07 -29.23 23.87 -26.91 26.46 -24.35 28.82 -21.6 30.95 -18.66 32.81 -15.55 34.39 -12.32 35.67 -8.98 36.66 -5.57 37.33 -2.1 37.68 1.37 37.71 4.84 37.42 8.27 36.82 11.63 35.9 14.88 34.68 18.02 33.16 20.99 31.36 23.79 29.29 26.39 26.98 28.76 24.43 30.89 21.68 32.75 18.74 34.34 15.65 1407.18 564.25 116.68 48.76 115.22 52.11 113.67 55.42 112.02 58.68 110.28 61.9 108.44 65.06 100.4 64.25c22.83,-7.55 43.57,-19.92 62.24,-37.12l-39.4 -26.14 -90.76 -58.08 -109.72 -65.83 -111.58 -62.62 -113.34 -59.37 -115.01 -56.08 -116.58 -52.72 -118.06 -49.33z"/><path class="fil3 str3" d="M3546.9 3189.65l-96.71 -83.77 -99.09 -80.94 -13.03 -10.03 -37.36 -28.76c-18.06,19.02 -22.57,40.26 -23.17,65.69l36.2 26.77 97.93 80 95.58 82.8 93.15 85.52 90.64 88.19c56.73,61.11 109.59,126.73 158.57,196.85l73.04 0c-54.9,-88.06 -118.17,-170.25 -189.82,-246.56l-62.32 -60.63 -29.39 -28.59 -94.25 -86.53z"/><path class="fil6 str5" d="M3507.27 3241.41l-95.58 -82.8 -97.93 -80 -36.2 -26.77c-10.06,42.32 2.47,57.29 17.64,78.65l60.51 48.78 93 79.4 90.71 81.99 88.35 84.53c65.13,68.81 112.66,131.06 154.27,186.77l67.6 0c-48.98,-70.12 -101.84,-135.74 -158.57,-196.85l-90.64 -88.19 -93.15 -85.52z"/><path class="fil6 str5" d="M2791.69 2722.83l-110.28 -61.9 -112.02 -58.68 -113.67 -55.42 -115.22 -52.11 -116.68 -48.76 -1407.18 -564.25 -34.34 -15.65 -32.75 -18.74 -30.89 -21.68 -28.76 -24.43 -26.39 -26.98 -23.79 -29.29 -20.99 -31.36 -18.02 -33.16 -14.88 -34.68 -11.63 -35.9 -8.27 -36.82 -4.84 -37.42 -1.37 -37.71 2.1 -37.68 5.57 -37.33 8.98 -36.66 12.32 -35.67 15.55 -34.39 18.66 -32.81 21.6 -30.95 24.35 -28.82 26.91 -26.46 29.23 -23.87 31.3 -21.07 33.11 -18.11 1448.3 -707.25 106.98 -53.85 105.44 -56.81 103.81 -59.72 102.12 -62.59 100.33 -65.4 98.47 -68.17c19.91,-14.36 36.16,-30.98 55.33,-49.85l-80.3 0 -97.44 69.64 -99.6 66.52 -101.64 63.35 -103.59 60.11 -105.43 56.81 -107.18 53.45 -1448.3 707.25 -35.9 19.55 -34.02 22.65 -31.89 25.57 -29.49 28.3 -26.87 30.8 -24.04 33.06 -21.02 35.06 -17.83 36.78 -14.5 38.22 -11.06 39.35 -7.53 40.18 -3.94 40.69 -0.32 40.87 3.3 40.74 6.9 40.29 10.43 39.52 13.9 38.44 17.25 37.06 20.46 35.39 23.52 33.43 26.38 31.22 29.04 28.76 31.48 26.08 33.66 23.18 35.59 20.11 37.22 16.88 1407.18 564.26 112.83 47.11 111.47 50.28 109.99 53.42 108.44 56.51 106.8 59.55 105.07 62.55 56.59 35.89c30.88,3.7 59.15,1.32 84.79,-7.16l-100.4 -64.25 -108.44 -65.06z"/><polygon class="fil1 str1" points="2137.82,10.44 10.44,10.44 10.44,1054.46 1599.68,269.76 1737.91,200.05 1868.75,140.11 2012.42,70.5 "/><polygon class="fil1 str1" points="2075.69,2832.5 10.44,1995.15 10.44,3611.97 3286.35,3611.97 3164.56,3492.11 3042.77,3390.9 2911.6,3299.42 2777.92,3211.74 2641.84,3127.92 2503.46,3048.02 2362.9,2972.11 2220.27,2900.25 "/><path class="fil4 str2" d="M8813.51 3454.98l-5002.58 0c40.46,50.08 77.71,102.4 111.74,156.99l4961.28 0 0 -3601.52 -70.44 0 0 3444.53z"/><path class="fil6 str5" d="M3066.47 2810.76c-35.47,36.14 -105.7,65.38 -166.58,39.58l61.91 39.27 101.36 68.39 99.39 71.23 97.33 74.01 40.48 32.62c-35.73,-48.07 -27.86,-110.53 6.32,-159.28l-240.22 -165.82z"/><line class="fil8 str9" x1="2313.16" y1="462.91" x2="2355.45" y2="442.3"/><polygon class="fil10 str10" points="1940.77,1103.24 2432.99,863.24 2291.33,573.78 1799.29,813.8 "/><polygon class="fil6 str5" points="1587.72,1027.64 1042.48,1293.61 1259.36,1738.11 1804.74,1472.04 "/><line class="fil8 str11" x1="1782.61" y1="1464.63" x2="1493.43" y2="1605.71"/><g><path class="fil11" d="M1371.88 1365.08l-6.17 3.22 -1.61 -3.09 6.17 -3.22 1.61 3.09zm118.46 242.24l-124.63 -239.02 6.17 -3.22 124.63 239.02 -6.17 3.22zm0 0l6.17 -3.22 1.61 3.09 -6.17 3.22 -1.61 -3.09z"/></g><line class="fil8 str12" x1="1657.98" y1="1225.61" x2="1781.17" y2="1461.8"/><line class="fil8 str12" x1="1607.66" y1="1378.19" x2="1679.09" y2="1515.14"/><line class="fil8 str12" x1="1529.67" y1="1416.15" x2="1601.15" y2="1553.16"/><line class="fil8 str12" x1="1607.48" y1="1378.19" x2="1529.68" y2="1416.15"/><path class="fil8 str12" d="M1529.68 1416.15c-10.97,-26.99 -5.55,-47.77 16.28,-62.35"/><path class="fil8 str12" d="M1514.27 1595.55c-59.93,-112.83 -49.37,-193.41 31.69,-241.75 28.53,-11.01 49.04,-2.88 61.52,24.39"/><path class="fil8 str12" d="M1545.96 1353.8c79.64,-35.96 150.72,4.8 213.22,122.27"/><g><path class="fil11" d="M1659.5 1228.74l-3.06 -6.26 3.13 -1.53 3.06 6.26 -3.13 1.53zm-292.23 134.82l289.17 -141.08 3.06 6.26 -289.17 141.08 -3.06 -6.26zm0 0l3.06 6.26 -3.13 1.53 -3.06 -6.26 3.13 -1.53z"/></g><polygon class="fil1 str1" points="1482.35,1629.32 1253.61,1190.62 1042.48,1293.61 1259.36,1738.11 "/><polygon class="fil2" points="1438.91,1546.01 1297.9,1275.56 1126.83,1359.1 1260.53,1633.13 "/><path class="fil12 str5" d="M3585.95 995.95l5.18 -3.52 9.21 -5.46 24.43 -12.11 29.29 -9.91 24.24 -5.57 20.61 -1.79 56.45 0 103.82 0 46.71 0 0 -0.14 103.83 0 0 0.14 46.71 0 103.82 0 46.71 0 0 -0.14 103.83 0 0 0.14 46.71 0 103.82 0 46.71 0 0 -0.14 103.83 0 0 0.14 46.71 0 0 -0.07 103.82 0 0 0.07 63.51 0 2.14 0 112.78 0.02 0 -0.17 103.83 0 0 0.14 65.53 0 103.83 0 46.71 0 0 -0.14 103.82 0 0 0.14 46.71 0 103.82 0 46.72 0 0 -0.14 103.82 0 0 0.14 46.71 0 103.83 0 46.71 0 0 -0.14 50.61 0 50.74 -1.5 55.35 -4.92 54.96 -8.17 54.38 -11.4 43.5 -9.13 43.96 -6.54 4.03 -0.35 37.63 -3.35 37.63 -1.27c432.77,-1.15 865.62,-0.28 1298.38,-0.28l25.11 1.68 24.66 5.02 23.76 8.26 22.45 11.36 20.74 14.25 18.65 16.89 16.23 19.23 13.52 21.22 10.57 22.83 7.42 24.04 4.15 24.82 1.07 7.57 1.18 13.1 45.72 0 -0.19 -11.56 -0.57 -9.46 -0.95 -9.42 -1.33 -9.38 -1.71 -9.32 -2.08 -9.24 -2.45 -9.15 -2.82 -9.04 -3.18 -8.92 -3.54 -8.79 -3.89 -8.64 -4.23 -8.47 -4.57 -8.3 -4.9 -8.1 -5.23 -7.91 -5.54 -7.69 -5.84 -7.46 -6.13 -7.22 -6.43 -6.96 -6.7 -6.7 -6.96 -6.42 -7.22 -6.14 -7.46 -5.85 -7.69 -5.53 -7.9 -5.22 -8.11 -4.9 -8.3 -4.57 -8.47 -4.23 -8.64 -3.89 -8.79 -3.53 -8.92 -3.19 -9.04 -2.81 -9.15 -2.45 -9.24 -2.08 -9.32 -1.71 -9.38 -1.33 -9.42 -0.96 -9.45 -0.57 -9.47 -0.19 -1288.97 0 -17.17 0.18 -17.17 0.56 -17.15 0.92 -17.13 1.29 -17.1 1.66 -17.06 2.02 -17.01 2.39 -16.95 2.76 -16.89 3.12 -16.82 3.48 -16.74 3.84 -17.15 3.95 -17.22 3.61 -17.29 3.28 -17.35 2.93 -17.41 2.59 -17.45 2.25 -17.49 1.9 -17.53 1.56 -17.55 1.21 -17.58 0.86 -17.59 0.52 -17.6 0.17 -2209.79 0 -9.46 0.19 -9.44 0.57 -9.41 0.95 -9.37 1.33 -9.31 1.7 -9.22 2.08 -9.14 2.45 -9.03 2.81 -8.92 3.17 -8.77 3.53 -8.62 3.88 -8.47 4.22 -8.29 4.56 -8.1 4.88 -7.89 5.21 -7.68 5.52 -7.45 5.83 -7.21 6.12 -6.96 6.41 -6.7 6.68 -6.42 6.94 -6.14 7.2 -5.84 7.44 -5.54 7.67 -5.23 7.88 -4.91 8.08 -4.57 8.28 -4.24 8.46 -3.9 8.62 -3.54 8.77 -3.19 8.91 -2.83 9.03 -2.47 9.13 -2.1 9.22 -1.72 9.3 -1.35 9.36 -0.97 9.41 -0.59 9.44 -0.21 9.46 0 1077.56 0.19 9.47 0.57 9.45 0.95 9.43 1.33 9.37 1.71 9.32 2.08 9.24 2.45 9.15 2.82 9.04 3.18 8.92 3.54 8.79 3.89 8.64 4.24 8.47 4.57 8.3 4.9 8.1 5.22 7.91 5.54 7.69 5.84 7.46 6.14 7.22 6.42 6.96 6.7 6.7 6.96 6.42 7.22 6.14 7.46 5.84 7.69 5.54 7.9 5.22 8.11 4.9 8.3 4.57 8.47 4.23 8.64 3.89 8.79 3.53 8.92 3.18 9.04 2.82 9.15 2.45 9.24 2.08 9.32 1.71 9.38 1.33 9.42 0.96 9.46 0.57 9.47 0.19 2155.74 0 17.25 -0.19 17.23 -0.56 17.22 -0.93 17.19 -1.3 17.17 -1.67 17.12 -2.04 17.08 -2.41 17.02 -2.78 16.96 -3.14 16.88 -3.51 16.8 -3.87 16.72 -4.23 16.62 -4.59 16.52 -4.95 16.41 -5.31 16.29 -5.66 16.16 -6.01 16.03 -6.36 15.89 -6.7 15.75 -7.04 15.58 -7.38 15.43 -7.71 15.25 -8.04 15.08 -8.37 14.89 -8.7 16 -9.34 16.2 -9.02 16.37 -8.68 16.55 -8.33 16.72 -7.99 16.88 -7.65 17.04 -7.29 17.19 -6.94 17.32 -6.58 17.46 -6.21 17.59 -5.86 17.7 -5.49 17.81 -5.12 17.91 -4.75 18.01 -4.38 18.09 -4 18.18 -3.62 18.24 -3.25 18.31 -2.87 18.36 -2.49 18.41 -2.11 18.45 -1.73 18.49 -1.35 18.51 -0.96 18.52 -0.58 18.53 -0.19 870.02 0 9.47 -0.19 9.45 -0.58 9.42 -0.95 9.38 -1.33 9.32 -1.71 9.24 -2.08 9.15 -2.45 9.04 -2.82 8.92 -3.18 8.79 -3.54 8.64 -3.89 8.47 -4.24 8.3 -4.57 8.11 -4.89 7.9 -5.23 7.69 -5.54 7.46 -5.84 7.22 -6.14 6.96 -6.42 6.7 -6.7 6.43 -6.96 6.13 -7.22 5.84 -7.46 5.54 -7.69 5.23 -7.9 4.9 -8.11 4.57 -8.3 4.23 -8.48 3.89 -8.63 3.54 -8.79 3.18 -8.92 2.82 -9.04 2.45 -9.15 2.08 -9.24 1.71 -9.32 1.33 -9.38 0.95 -9.42 0.57 -9.45 0.19 -11.57 -45.88 0 -0.91 13.26 -5.33 32.23 -7.42 24.04 -10.57 22.84 -13.52 21.22 -16.23 19.23 -18.65 16.89 -20.74 14.25 -22.45 11.36 -23.76 8.26 -24.66 5.01 -25.11 1.68c-275.98,0 -551.97,0 -827.95,0l-42.07 0 -108.47 6.39 -54.71 8.01 -60.09 12.48 -54.31 15 -53.32 18.23 -52.13 21.39 -50.76 24.47 -49.2 27.47 -44.37 24.55 -45.92 21.51 -33.5 13.01 -103.83 30.51 -46.71 8.48 -57.04 6.73 -55.01 1.95 -38.48 0c-705.17,1.95 -1412.17,3.58 -2117.26,0l-32.06 -2.89 -39.46 -12.59 -32.57 -14.8 -23.58 -16.67 -26.32 -30.58 -19.43 -32.74 -8.33 -29.2 -4.8 -24.14 -1.61 -24.56 0 -564.57 0 -39.58 0 -473.35 1.67 -24.52 4.85 -24.09 7.95 -23.25 10.91 -22.03 13.69 -20.41 15.38 -17.5 0.84 -0.96 14.79 -12.94 5.14 -3.65z"/><path class="fil3 str3" d="M1906.12 1492.5l-278.48 -569.46 46.77 -22.83 150.76 312.2 654.58 -319.57c48.99,-25.5 59.25,-72.16 32.96,-125.84l-158.7 -327.4 -44.8 15.77 165.25 341.33c9.41,24.14 -1.69,44.15 -20.13,56.09l-606.92 295.96 -151.06 -312.06 -132.06 64.47 277.67 569.81 -92.28 45.33 -6.96 -14.02 -42.49 20.73 27.54 56.5 178.33 -87.02z"/><text x="1281.04" y="1442.48" class="fil13 fnt0" text-anchor="middle">PLAY</text><text x="1281.04" y="1501.15" class="fil13 fnt0" text-anchor="middle">AREA</text><text x="2116.09" y="824.41" class="fil13 fnt1" text-anchor="middle">OFF-LEASH</text><text x="2116.09" y="899.87" class="fil13 fnt1" text-anchor="middle">AREA</text><polygon class="fil3 str3" points="2097.7,1070.18 2115.27,1106.57 2121.98,1120.47 2164.24,1099.86 2139.09,1047.77 2137.83,1048.39 2096.83,1068.38 "/><path class="fil6 str5" d="M3045.48 10.44l0 274.43 195.64 0 119.02 0c3.39,-24.78 17.81,-47.9 39.11,-71.9l106.78 -98.95 129.87 -103.58 -590.42 0z"/><line class="fil8 str7" x1="3045.48" y1="160.9" x2="3305.91" y2="160.9"/><g transform="matrix(0.898794 -4.38371E-001 0.438371 0.898794 -3.08825E+003 1121.2)"><text x="4278.19" y="1561.12" class="fil14 fnt2">ASH WAY</text></g><g transform="matrix(0.926316 0.376748 -3.76748E-001 0.926316 -2.20096E+003 -7.95999E+002)"><text x="4232.84" y="1561.12" class="fil14 fnt2">ALDER WAY</text></g><g id="houses"><polygon class="lot house" data-lot="A1" points="3146.15,2058.53 2976.8,2058.53 2976.8,2425.32 3146.15,2425.32"/><polygon class="lot house" data-lot="A2" points="2976.8,2058.53 2826.26,2058.53 2826.26,2425.32 2976.8,2425.32"/><polygon class="lot house" data-lot="A3" points="2826.26,2058.53 2656.9,2058.53 2656.9,2425.32 2826.26,2425.32"/><polygon class="lot house" data-lot="B1" points="2330.33,1934.54 2256.1,1782.32 1926.42,1943.11 2000.66,2095.33"/><polygon class="lot house" data-lot="B2" points="2256.09,1782.32 2190.11,1647.02 1860.43,1807.81 1926.42,1943.11"/><polygon class="lot house" data-lot="B3" points="2190.11,1647.02 2115.86,1494.8 1786.19,1655.6 1860.43,1807.81"/><polygon class="lot house" data-lot="C1" points="3101.99,1587.97 3101.99,1418.61 2735.2,1418.61 2735.2,1587.97"/><polygon class="lot house" data-lot="C2" points="3101.99,1418.61 3101.99,1268.07 2735.2,1268.07 2735.2,1418.61"/><polygon class="lot house" data-lot="C3" points="3101.99,1268.07 3101.99,1117.54 2735.2,1117.54 2735.2,1268.07"/><polygon class="lot house" data-lot="C4" points="3101.99,1117.54 3101.99,967 2735.2,967 2735.2,1117.54"/><polygon class="lot house" data-lot="C5" points="3101.99,967 3101.99,816.46 2735.2,816.46 2735.2,967"/><polygon class="lot house" data-lot="C6" points="3101.99,816.46 3101.99,665.92 2735.2,665.92 2735.2,816.46"/><polygon class="lot house" data-lot="C7" points="3101.99,665.92 3101.99,515.39 2735.2,515.39 2735.2,665.92"/><polygon class="lot house" data-lot="C8" points="3101.99,515.39 3101.99,346.03 2735.2,346.03 2735.2,515.39"/><polygon class="lot house" data-lot="D1" points="4658.59,1512.69 4827.94,1512.69 4827.94,1145.9 4658.59,1145.9"/><polygon class="lot house" data-lot="D2" points="4508.05,1512.69 4658.59,1512.69 4658.59,1145.9 4508.05,1145.9"/><polygon class="lot house" data-lot="D3" points="4357.51,1512.69 4508.05,1512.69 4508.05,1145.9 4357.51,1145.9"/><polygon class="lot house" data-lot="D4" points="4206.97,1512.69 4357.51,1512.69 4357.51,1145.9 4206.97,1145.9"/><polygon class="lot house" data-lot="D5" points="4056.43,1512.69 4206.97,1512.69 4206.97,1145.9 4056.43,1145.9"/><polygon class="lot house" data-lot="D6" points="3905.9,1512.69 4056.43,1512.69 4056.43,1145.9 3905.9,1145.9"/><polygon class="lot house" data-lot="D7" points="3755.36,1512.69 3905.9,1512.69 3905.9,1145.9 3755.36,1145.9"/><polygon class="lot house" data-lot="D8" points="3586,1512.69 3755.36,1512.69 3755.36,1145.9 3586,1145.9"/><polygon class="lot house" data-lot="E1" points="3755.11,553.02 3924.47,553.02 3924.47,186.23 3755.11,186.23"/><polygon class="lot house" data-lot="E2" points="3924.47,553.02 4075.01,553.02 4075.01,186.23 3924.47,186.23"/><polygon class="lot house" data-lot="E3" points="4075.01,553.02 4225.54,553.02 4225.54,186.23 4075.01,186.23"/><polygon class="lot house" data-lot="E4" points="4225.54,553.02 4376.08,553.02 4376.08,186.23 4225.54,186.23"/><polygon class="lot house" data-lot="E5" points="4376.08,553.02 4526.62,553.02 4526.62,186.23 4376.08,186.23"/><polygon class="lot house" data-lot="E6" points="4526.62,553.02 4677.15,553.02 4677.15,186.23 4526.62,186.23"/><polygon class="lot house" data-lot="E7" points="4677.15,553.02 4827.69,553.02 4827.69,186.23 4677.15,186.23"/><polygon class="lot house" data-lot="E8" points="4827.69,553.02 4997.05,553.02 4997.05,186.23 4827.69,186.23"/><polygon class="lot house" data-lot="F1" points="6013.42,1512.69 6182.78,1512.69 6182.78,1145.9 6013.42,1145.9"/><polygon class="lot house" data-lot="F2" points="5862.88,1512.69 6013.42,1512.69 6013.42,1145.9 5862.88,1145.9"/><polygon class="lot house" data-lot="F3" points="5712.34,1512.69 5862.88,1512.69 5862.88,1145.9 5712.34,1145.9"/><polygon class="lot house" data-lot="F4" points="5561.81,1512.69 5712.34,1512.69 5712.34,1145.9 5561.81,1145.9"/><polygon class="lot house" data-lot="F5" points="5411.27,1512.69 5561.81,1512.69 5561.81,1145.9 5411.27,1145.9"/><polygon class="lot house" data-lot="F6" points="5260.73,1512.69 5411.27,1512.69 5411.27,1145.9 5260.73,1145.9"/><polygon class="lot house" data-lot="F7" points="5110.2,1512.69 5260.73,1512.69 5260.73,1145.9 5110.2,1145.9"/><polygon class="lot house" data-lot="F8" points="4940.84,1512.69 5110.2,1512.69 5110.2,1145.9 4940.84,1145.9"/><polygon class="lot house" data-lot="G1" points="5110.07,553.02 5279.43,553.02 5279.43,186.23 5110.07,186.23"/><polygon class="lot house" data-lot="G2" points="5279.43,553.02 5429.97,553.02 5429.97,186.23 5279.43,186.23"/><polygon class="lot house" data-lot="G3" points="5429.97,553.02 5580.5,553.02 5580.5,186.23 5429.97,186.23"/><polygon class="lot house" data-lot="G4" points="5586.25,553.42 5736.79,553.42 5736.79,186.63 5586.25,186.63"/><polygon class="lot house" data-lot="G5" points="5731.04,553.02 5881.58,553.02 5881.58,186.23 5731.04,186.23"/><polygon class="lot house" data-lot="G6" points="5881.58,553.02 6032.11,553.02 6032.11,186.23 5881.58,186.23"/><polygon class="lot house" data-lot="G7" points="6032.11,553.02 6182.65,553.02 6182.65,186.23 6032.11,186.23"/><polygon class="lot house" data-lot="G8" points="6182.65,553.02 6352.01,553.02 6352.01,186.23 6182.65,186.23"/><polygon class="lot house" data-lot="H1" points="7368.26,1454.09 7537.61,1454.09 7537.61,1087.3 7368.26,1087.3"/><polygon class="lot house" data-lot="H2" points="7217.72,1454.09 7368.26,1454.09 7368.26,1087.3 7217.72,1087.3"/><polygon class="lot house" data-lot="H3" points="7067.18,1454.09 7217.72,1454.09 7217.72,1087.3 7067.18,1087.3"/><polygon class="lot house" data-lot="H4" points="6916.64,1454.09 7067.18,1454.09 7067.18,1087.3 6916.64,1087.3"/><polygon class="lot house" data-lot="H5" points="6766.1,1454.09 6916.64,1454.09 6916.64,1087.3 6766.1,1087.3"/><polygon class="lot house" data-lot="H6" points="6615.57,1454.09 6766.1,1454.09 6766.1,1087.3 6615.57,1087.3"/><polygon class="lot house" data-lot="H7" points="6465.03,1454.09 6615.57,1454.09 6615.57,1087.3 6465.03,1087.3"/><polygon class="lot house" data-lot="H8" points="6295.68,1454.09 6465.03,1454.09 6465.03,1087.3 6295.68,1087.3"/><polygon class="lot house" data-lot="J1" points="6465.03,505.97 6634.38,505.97 6634.38,139.18 6465.03,139.18"/><polygon class="lot house" data-lot="J2" points="6634.38,139.18 6634.38,505.97 6784.92,505.97 6784.92,139.18"/><polygon class="lot house" data-lot="J3" points="6784.92,139.18 6784.92,505.97 6785.88,505.97 6889.71,505.97 6935.46,505.97 6935.46,139.18"/><polygon class="lot house" data-lot="J4" points="6935.46,139.18 6935.46,505.97 7086,505.97 7086,139.18"/><polygon class="lot house" data-lot="J5" points="7086,139.18 7086,505.97 7086.96,505.97 7190.79,505.97 7236.54,505.97 7236.54,139.18"/><polygon class="lot house" data-lot="J6" points="7236.54,139.18 7236.54,505.97 7387.07,505.97 7387.07,139.18"/><polygon class="lot house" data-lot="J7" points="7387.07,139.18 7387.07,505.97 7388.04,505.97 7491.86,505.97 7537.61,505.97 7537.61,139.18"/><polygon class="lot house" data-lot="J8" points="7537.61,139.18 7537.61,505.97 7706.97,505.97 7706.97,139.18"/><polygon class="lot house" data-lot="K1" points="8186.66,270.85 8186.66,120.31 8553.45,120.31 8553.45,270.85"/><polygon class="lot house" data-lot="K2" points="8186.8,270.85 8186.8,421.39 8553.6,421.39 8553.6,270.85"/><polygon class="lot house" data-lot="K3" points="8186.8,421.39 8186.8,525.21 8186.8,571.92 8553.6,571.92 8553.6,421.39"/><polygon class="lot house" data-lot="K4" points="8186.8,571.92 8186.8,722.46 8553.6,722.46 8553.6,571.92"/><polygon class="lot house" data-lot="K5" points="8186.8,722.46 8186.8,826.28 8186.8,873 8553.6,873 8553.6,722.46"/><polygon class="lot house" data-lot="K6" points="8186.8,873 8186.8,1023.53 8553.6,1023.53 8553.6,873"/><polygon class="lot house" data-lot="K7" points="8186.8,1023.53 8186.8,1127.36 8186.8,1192.89 8553.6,1192.89 8553.6,1023.53"/><polygon class="lot house" data-lot="L1" points="8186.8,1330.01 8186.8,1433.83 8186.8,1499.37 8553.6,1499.37 8553.6,1330.01"/><polygon class="lot house" data-lot="L2" points="8186.8,1499.37 8186.8,1649.9 8553.6,1649.9 8553.6,1499.37"/><polygon class="lot house" data-lot="L3" points="8186.8,1649.9 8186.8,1753.72 8186.8,1800.44 8553.6,1800.44 8553.6,1649.9"/><polygon class="lot house" data-lot="L4" points="8186.8,1800.44 8186.8,1950.98 8553.6,1950.98 8553.6,1800.44"/><polygon class="lot house" data-lot="L5" points="8186.8,1950.98 8186.8,2054.8 8186.8,2101.51 8553.6,2101.51 8553.6,1950.98"/><polygon class="lot house" data-lot="L6" points="8186.8,2101.51 8186.8,2252.05 8553.6,2252.05 8553.6,2101.51"/><polygon class="lot house" data-lot="L7" points="8186.8,2402.59 8186.8,2252.05 8553.6,2252.05 8553.6,2402.59"/><polygon class="lot house" data-lot="M1" points="6295.68,1996.72 6465.03,1996.72 6465.03,1629.92 6295.68,1629.92"/><polygon class="lot house" data-lot="M2" points="6465.03,1996.72 6615.57,1996.72 6615.57,1629.92 6465.03,1629.92"/><polygon class="lot house" data-lot="M3" points="6615.57,1996.72 6766.1,1996.72 6766.1,1629.92 6615.57,1629.92"/><polygon class="lot house" data-lot="M4" points="6766.1,1996.72 6916.64,1996.72 6916.64,1629.92 6766.1,1629.92"/><polygon class="lot house" data-lot="M5" points="6916.64,1996.72 7067.18,1996.72 7067.18,1629.92 6916.64,1629.92"/><polygon class="lot house" data-lot="M6" points="7067.18,1996.72 7217.72,1996.72 7217.72,1629.92 7067.18,1629.92"/><polygon class="lot house" data-lot="M7" points="7217.72,1996.72 7368.26,1996.72 7368.26,1629.92 7217.72,1629.92"/><polygon class="lot house" data-lot="M8" points="7368.26,1629.92 7537.61,1629.92 7537.61,1996.71 7368.26,1996.71"/><polygon class="lot house" data-lot="N1" points="6410.57,3194.91 6579.92,3194.91 6579.92,2828.11 6410.57,2828.11"/><polygon class="lot house" data-lot="N2" points="6260.03,3194.91 6410.57,3194.91 6410.57,2828.11 6260.03,2828.11"/><polygon class="lot house" data-lot="N3" points="6109.49,3194.91 6260.03,3194.91 6260.03,2828.11 6109.49,2828.11"/><polygon class="lot house" data-lot="N4" points="5958.95,3194.91 6109.49,3194.91 6109.49,2828.11 5958.95,2828.11"/><polygon class="lot house" data-lot="N5" points="5808.41,3194.91 5958.95,3194.91 5958.95,2828.11 5808.41,2828.11"/><polygon class="lot house" data-lot="N6" points="5657.88,3194.91 5808.41,3194.91 5808.41,2828.11 5657.88,2828.11"/><polygon class="lot house" data-lot="N7" points="5507.34,3194.91 5657.88,3194.91 5657.88,2828.11 5507.34,2828.11"/><polygon class="lot house" data-lot="N8" points="5356.8,3194.91 5507.34,3194.91 5507.34,2828.11 5356.8,2828.11"/><polygon class="lot house" data-lot="N9" points="5187.45,3194.91 5356.8,3194.91 5356.8,2828.11 5187.45,2828.11"/><polygon class="lot house" data-lot="P1" points="4940.84,2222.79 5110.2,2222.79 5110.2,1855.99 4940.84,1855.99"/><polygon class="lot house" data-lot="P2" points="5110.2,2222.79 5260.73,2222.79 5260.73,1855.99 5110.2,1855.99"/><polygon class="lot house" data-lot="P3" points="5260.73,2222.79 5411.27,2222.79 5411.27,1855.99 5260.73,1855.99"/><polygon class="lot house" data-lot="P4" points="5411.27,2222.79 5561.81,2222.79 5561.81,1855.99 5411.27,1855.99"/><polygon class="lot house" data-lot="P5" points="5561.81,2222.79 5712.34,2222.79 5712.34,1855.99 5561.81,1855.99"/><polygon class="lot house" data-lot="P6" points="5712.34,2222.79 5862.88,2222.79 5862.88,1855.99 5712.34,1855.99"/><polygon class="lot house" data-lot="P7" points="5862.88,2222.79 6013.42,2222.79 6013.42,1855.99 5862.88,1855.99"/><polygon class="lot house" data-lot="P8" points="6013.42,2222.79 6182.78,2222.79 6182.78,1855.99 6013.42,1855.99"/><polygon class="lot house" data-lot="Q1" points="4881.67,3194.91 5051.03,3194.91 5051.03,2828.11 4881.67,2828.11"/><polygon class="lot house" data-lot="Q2" points="4731.13,3194.91 4881.67,3194.91 4881.67,2828.11 4731.13,2828.11"/><polygon class="lot house" data-lot="Q3" points="4580.59,3194.91 4731.13,3194.91 4731.13,2828.11 4580.59,2828.11"/><polygon class="lot house" data-lot="Q4" points="4430.06,3194.91 4580.59,3194.91 4580.59,2828.11 4430.06,2828.11"/><polygon class="lot house" data-lot="Q5" points="4279.52,3194.91 4430.06,3194.91 4430.06,2828.11 4279.52,2828.11"/><polygon class="lot house" data-lot="Q6" points="4128.98,3194.91 4279.52,3194.91 4279.52,2828.11 4128.98,2828.11"/><polygon class="lot house" data-lot="Q7" points="3978.45,3194.91 4128.98,3194.91 4128.98,2828.11 3978.45,2828.11"/><polygon class="lot house" data-lot="Q8" points="3827.91,3194.91 3978.45,3194.91 3978.45,2828.11 3827.91,2828.11"/><polygon class="lot house" data-lot="Q9" points="3658.55,3194.91 3827.91,3194.91 3827.91,2828.11 3658.55,2828.11"/><polygon class="lot house" data-lot="R1" points="3586,2222.79 3755.36,2222.79 3755.36,1855.99 3586,1855.99"/><polygon class="lot house" data-lot="R2" points="3755.36,2222.79 3905.9,2222.79 3905.9,1855.99 3755.36,1855.99"/><polygon class="lot house" data-lot="R3" points="3905.9,2222.79 4056.43,2222.79 4056.43,1855.99 3905.9,1855.99"/><polygon class="lot house" data-lot="R4" points="4056.43,2222.79 4206.97,2222.79 4206.97,1855.99 4056.43,1855.99"/><polygon class="lot house" data-lot="R5" points="4206.97,2222.79 4357.51,2222.79 4357.51,1855.99 4206.97,1855.99"/><polygon class="lot house" data-lot="R6" points="4357.51,2222.79 4508.05,2222.79 4508.05,1855.99 4357.51,1855.99"/><polygon class="lot house" data-lot="R7" points="4508.05,2222.79 4658.59,2222.79 4658.59,1855.99 4508.05,1855.99"/><polygon class="lot house" data-lot="R8" points="4658.59,2222.79 4827.94,2222.79 4827.94,1855.99 4658.59,1855.99"/></g><g id="lot-outline"/><g id="labels"><text class="label" data-lot="A1" x="3021.29" y="2267.99">A1</text><text class="label" data-lot="A2" x="2858.39" y="2267.99">A2</text><text class="label" data-lot="A3" x="2698.62" y="2267.13">A3</text><text class="label" data-lot="B1" x="4403.56" y="1561.12" transform="matrix(0.898794 -0.438371 0.438371 0.898794 -2547.28 2509.95)">B1</text><text class="label" data-lot="B2" x="4403.56" y="1561.12" transform="matrix(0.898794 -0.438371 0.438371 0.898794 -2622.39 2365.14)">B2</text><text class="label" data-lot="B3" x="4403.56" y="1561.12" transform="matrix(0.898794 -0.438371 0.438371 0.898794 -2691.28 2221.65)">B3</text><text class="label" data-lot="C1" x="2872.49" y="1528.83">C1</text><text class="label" data-lot="C2" x="2869.55" y="1368.88">C2</text><text class="label" data-lot="C3" x="2869.72" y="1218.34">C3</text><text class="label" data-lot="C4" x="2870.24" y="1067.8">C4</text><text class="label" data-lot="C5" x="2869.18" y="917.27">C5</text><text class="label" data-lot="C6" x="2869.34" y="766.73">C6</text><text class="label" data-lot="C7" x="2868.37" y="616.19">C7</text><text class="label" data-lot="C8" x="2869.46" y="456.23">C8</text><text class="label" data-lot="D1" x="4698.8" y="1355.34">D1</text><text class="label" data-lot="D2" x="4535.92" y="1355.34">D2</text><text class="label" data-lot="D3" x="4385.55" y="1354.49">D3</text><text class="label" data-lot="D4" x="4235.54" y="1355.34">D4</text><text class="label" data-lot="D5" x="4083.94" y="1354.49">D5</text><text class="label" data-lot="D6" x="3933.56" y="1354.49">D6</text><text class="label" data-lot="D7" x="3782.05" y="1355.34">D7</text><text class="label" data-lot="D8" x="3623.2" y="1354.49">D8</text><text class="label" data-lot="E1" x="3797.28" y="395.27">E1</text><text class="label" data-lot="E2" x="3954.28" y="395.27">E2</text><text class="label" data-lot="E3" x="4104.99" y="394.83">E3</text><text class="label" data-lot="E4" x="4256.06" y="395.16">E4</text><text class="label" data-lot="E5" x="4405.53" y="394.73">E5</text><text class="label" data-lot="E6" x="4556.23" y="394.83">E6</text><text class="label" data-lot="E7" x="4705.79" y="395.16">E7</text><text class="label" data-lot="E8" x="4866.83" y="394.82">E8</text><text class="label" data-lot="F1" x="6057.58" y="1355.34">F1</text><text class="label" data-lot="F2" x="5894.7" y="1355.34">F2</text><text class="label" data-lot="F3" x="5744.33" y="1354.49">F3</text><text class="label" data-lot="F4" x="5594.32" y="1355.34">F4</text><text class="label" data-lot="F5" x="5442.72" y="1354.49">F5</text><text class="label" data-lot="F6" x="5292.34" y="1354.49">F6</text><text class="label" data-lot="F7" x="5140.83" y="1355.34">F7</text><text class="label" data-lot="F8" x="4981.98" y="1354.49">F8</text><text class="label" data-lot="G1" x="5146.43" y="394.3">G1</text><text class="label" data-lot="G2" x="5303.44" y="394.3">G2</text><text class="label" data-lot="G3" x="5454.14" y="394.3">G3</text><text class="label" data-lot="G4" x="5605.21" y="394.3">G4</text><text class="label" data-lot="G5" x="5754.67" y="394.3">G5</text><text class="label" data-lot="G6" x="5905.37" y="394.3">G6</text><text class="label" data-lot="G7" x="6054.94" y="394.3">G7</text><text class="label" data-lot="G8" x="6215.97" y="394.3">G8</text><text class="label" data-lot="H1" x="7408.57" y="1296.73">H1</text><text class="label" data-lot="H2" x="7245.68" y="1296.73">H2</text><text class="label" data-lot="H3" x="7095.32" y="1295.88">H3</text><text class="label" data-lot="H4" x="6945.3" y="1296.73">H4</text><text class="label" data-lot="H5" x="6793.7" y="1295.88">H5</text><text class="label" data-lot="H6" x="6643.32" y="1295.88">H6</text><text class="label" data-lot="H7" x="6491.81" y="1296.73">H7</text><text class="label" data-lot="H8" x="6332.95" y="1295.88">H8</text><text class="label" data-lot="J1" x="6513.61" y="347.77">J1</text><text class="label" data-lot="J2" x="6670.6" y="347.77">J2</text><text class="label" data-lot="J3" x="6821.31" y="347.77">J3</text><text class="label" data-lot="J4" x="6972.37" y="347.69">J4</text><text class="label" data-lot="J5" x="7121.84" y="347.69">J5</text><text class="label" data-lot="J6" x="7272.54" y="347.77">J6</text><text class="label" data-lot="J7" x="7422.11" y="347.69">J7</text><text class="label" data-lot="J8" x="7583.14" y="347.77">J8</text><text class="label" data-lot="K1" x="8327.75" y="221.22">K1</text><text class="label" data-lot="K2" x="8324.79" y="371.76">K2</text><text class="label" data-lot="K3" x="8324.97" y="521.87">K3</text><text class="label" data-lot="K4" x="8325.4" y="672.73">K4</text><text class="label" data-lot="K5" x="8324.43" y="822.83">K5</text><text class="label" data-lot="K6" x="8324.57" y="973.47">K6</text><text class="label" data-lot="K7" x="8323.61" y="1133.75">K7</text><text class="label" data-lot="L1" x="8331.74" y="1440.33">L1</text><text class="label" data-lot="L2" x="8328.78" y="1600.28">L2</text><text class="label" data-lot="L3" x="8328.96" y="1750.38">L3</text><text class="label" data-lot="L4" x="8329.39" y="1901.25">L4</text><text class="label" data-lot="L5" x="8328.42" y="2051.35">L5</text><text class="label" data-lot="L6" x="8328.57" y="2201.99">L6</text><text class="label" data-lot="L7" x="8327.6" y="2352.86">L7</text><text class="label" data-lot="M1" x="6331.96" y="1838.93">M1</text><text class="label" data-lot="M2" x="6488.97" y="1838.93">M2</text><text class="label" data-lot="M3" x="6639.68" y="1838.5">M3</text><text class="label" data-lot="M4" x="6790.74" y="1838.86">M4</text><text class="label" data-lot="M5" x="6940.21" y="1838.43">M5</text><text class="label" data-lot="M6" x="7090.91" y="1838.5">M6</text><text class="label" data-lot="M7" x="7240.47" y="1838.86">M7</text><text class="label" data-lot="M8" x="7401.29" y="1838.5">M8</text><text class="label" data-lot="N1" x="6450.63" y="3037.13">N1</text><text class="label" data-lot="N2" x="6287.74" y="3037.13">N2</text><text class="label" data-lot="N3" x="6137.38" y="3036.7">N3</text><text class="label" data-lot="N4" x="5987.37" y="3037.06">N4</text><text class="label" data-lot="N5" x="5835.77" y="3036.63">N5</text><text class="label" data-lot="N6" x="5685.39" y="3036.7">N6</text><text class="label" data-lot="N7" x="5533.88" y="3037.06">N7</text><text class="label" data-lot="N8" x="5384.43" y="3036.7">N8</text><text class="label" data-lot="N9" x="5224.95" y="3036.7">N9</text><text class="label" data-lot="P1" x="4983.08" y="2065.44">P1</text><text class="label" data-lot="P2" x="5140.09" y="2065.44">P2</text><text class="label" data-lot="P3" x="5290.8" y="2064.58">P3</text><text class="label" data-lot="P4" x="5441.86" y="2065.44">P4</text><text class="label" data-lot="P5" x="5591.33" y="2064.58">P5</text><text class="label" data-lot="P6" x="5742.03" y="2064.58">P6</text><text class="label" data-lot="P7" x="5891.59" y="2065.44">P7</text><text class="label" data-lot="P8" x="6052.63" y="2064.58">P8</text><text class="label" data-lot="Q1" x="4918.2" y="3034.55">Q1</text><text class="label" data-lot="Q2" x="4755.31" y="3034.55">Q2</text><text class="label" data-lot="Q3" x="4604.94" y="3034.55">Q3</text><text class="label" data-lot="Q4" x="4454.93" y="3034.55">Q4</text><text class="label" data-lot="Q5" x="4303.33" y="3034.55">Q5</text><text class="label" data-lot="Q6" x="4152.95" y="3034.55">Q6</text><text class="label" data-lot="Q7" x="4001.44" y="3034.55">Q7</text><text class="label" data-lot="Q8" x="3852.0" y="3034.55">Q8</text><text class="label" data-lot="Q9" x="3692.52" y="3034.55">Q9</text><text class="label" data-lot="R1" x="3626.15" y="2065.44">R1</text><text class="label" data-lot="R2" x="3783.15" y="2065.44">R2</text><text class="label" data-lot="R3" x="3933.86" y="2064.58">R3</text><text class="label" data-lot="R4" x="4084.92" y="2065.44">R4</text><text class="label" data-lot="R5" x="4234.4" y="2064.58">R5</text><text class="label" data-lot="R6" x="4385.09" y="2064.58">R6</text><text class="label" data-lot="R7" x="4534.65" y="2065.44">R7</text><text class="label" data-lot="R8" x="4695.69" y="2064.58">R8</text></g><g id="dots"><circle class="dot" data-lot="A1" cx="3061.47" cy="2425.32" r="45.29"/><circle class="dot" data-lot="A2" cx="2901.52" cy="2425.32" r="45.29"/><circle class="dot" data-lot="A3" cx="2741.58" cy="2425.32" r="45.29"/><circle class="dot" data-lot="B1" cx="1963.54" cy="2019.22" r="45.29"/><circle class="dot" data-lot="B2" cx="1893.43" cy="1875.46" r="45.29"/><circle class="dot" data-lot="B3" cx="1823.31" cy="1731.7" r="45.29"/><circle class="dot" data-lot="C1" cx="2735.2" cy="1503.29" r="45.29"/><circle class="dot" data-lot="C2" cx="2735.2" cy="1343.34" r="45.29"/><circle class="dot" data-lot="C3" cx="2735.2" cy="1192.8" r="45.29"/><circle class="dot" data-lot="C4" cx="2735.2" cy="1042.26" r="45.29"/><circle class="dot" data-lot="C5" cx="2735.2" cy="891.73" r="45.29"/><circle class="dot" data-lot="C6" cx="2735.2" cy="741.19" r="45.29"/><circle class="dot" data-lot="C7" cx="2735.2" cy="590.65" r="45.29"/><circle class="dot" data-lot="C8" cx="2735.2" cy="430.71" r="45.29"/><circle class="dot" data-lot="D1" cx="4743.26" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D2" cx="4583.32" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D3" cx="4432.78" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D4" cx="4282.24" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D5" cx="4131.7" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D6" cx="3981.17" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D7" cx="3830.63" cy="1512.69" r="45.29"/><circle class="dot" data-lot="D8" cx="3670.68" cy="1512.69" r="45.29"/><circle class="dot" data-lot="E1" cx="3839.79" cy="186.23" r="45.29"/><circle class="dot" data-lot="E2" cx="3999.74" cy="186.23" r="45.29"/><circle class="dot" data-lot="E3" cx="4150.27" cy="186.23" r="45.29"/><circle class="dot" data-lot="E4" cx="4300.81" cy="186.23" r="45.29"/><circle class="dot" data-lot="E5" cx="4451.35" cy="186.23" r="45.29"/><circle class="dot" data-lot="E6" cx="4601.89" cy="186.23" r="45.29"/><circle class="dot" data-lot="E7" cx="4752.42" cy="186.23" r="45.29"/><circle class="dot" data-lot="E8" cx="4912.37" cy="186.23" r="45.29"/><circle class="dot" data-lot="F1" cx="6098.1" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F2" cx="5938.16" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F3" cx="5787.62" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F4" cx="5637.08" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F5" cx="5486.54" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F6" cx="5336.01" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F7" cx="5185.47" cy="1512.69" r="45.29"/><circle class="dot" data-lot="F8" cx="5025.52" cy="1512.69" r="45.29"/><circle class="dot" data-lot="G1" cx="5194.75" cy="186.23" r="45.29"/><circle class="dot" data-lot="G2" cx="5354.7" cy="186.23" r="45.29"/><circle class="dot" data-lot="G3" cx="5505.24" cy="186.23" r="45.29"/><circle class="dot" data-lot="G4" cx="5655.77" cy="186.23" r="45.29"/><circle class="dot" data-lot="G5" cx="5806.31" cy="186.23" r="45.29"/><circle class="dot" data-lot="G6" cx="5956.85" cy="186.23" r="45.29"/><circle class="dot" data-lot="G7" cx="6107.38" cy="186.23" r="45.29"/><circle class="dot" data-lot="G8" cx="6267.33" cy="186.23" r="45.29"/><circle class="dot" data-lot="H1" cx="7452.93" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H2" cx="7292.99" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H3" cx="7142.45" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H4" cx="6991.91" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H5" cx="6841.37" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H6" cx="6690.84" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H7" cx="6540.3" cy="1454.09" r="45.29"/><circle class="dot" data-lot="H8" cx="6380.35" cy="1454.09" r="45.29"/><circle class="dot" data-lot="J1" cx="6549.71" cy="139.18" r="45.29"/><circle class="dot" data-lot="J2" cx="6709.66" cy="139.18" r="45.29"/><circle class="dot" data-lot="J3" cx="6860.19" cy="139.18" r="45.29"/><circle class="dot" data-lot="J4" cx="7010.73" cy="139.18" r="45.29"/><circle class="dot" data-lot="J5" cx="7161.27" cy="139.18" r="45.29"/><circle class="dot" data-lot="J6" cx="7311.81" cy="139.18" r="45.29"/><circle class="dot" data-lot="J7" cx="7462.34" cy="139.18" r="45.29"/><circle class="dot" data-lot="J8" cx="7622.29" cy="139.18" r="45.29"/><circle class="dot" data-lot="K1" cx="8553.45" cy="195.58" r="45.29"/><circle class="dot" data-lot="K2" cx="8553.6" cy="346.12" r="45.29"/><circle class="dot" data-lot="K3" cx="8553.6" cy="496.65" r="45.29"/><circle class="dot" data-lot="K4" cx="8553.6" cy="647.19" r="45.29"/><circle class="dot" data-lot="K5" cx="8553.6" cy="797.73" r="45.29"/><circle class="dot" data-lot="K6" cx="8553.6" cy="948.27" r="45.29"/><circle class="dot" data-lot="K7" cx="8553.6" cy="1108.21" r="45.29"/><circle class="dot" data-lot="L1" cx="8553.45" cy="1414.69" r="45.29"/><circle class="dot" data-lot="L2" cx="8553.6" cy="1565.23" r="45.29"/><circle class="dot" data-lot="L3" cx="8553.6" cy="1715.76" r="45.29"/><circle class="dot" data-lot="L4" cx="8553.6" cy="1866.3" r="45.29"/><circle class="dot" data-lot="L5" cx="8553.6" cy="2016.84" r="45.29"/><circle class="dot" data-lot="L6" cx="8553.6" cy="2167.38" r="45.29"/><circle class="dot" data-lot="L7" cx="8553.6" cy="2327.32" r="45.29"/><circle class="dot" data-lot="M1" cx="6380.35" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M2" cx="6540.3" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M3" cx="6690.84" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M4" cx="6841.37" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M5" cx="6991.91" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M6" cx="7142.45" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M7" cx="7292.98" cy="1630.06" r="45.29"/><circle class="dot" data-lot="M8" cx="7452.93" cy="1630.06" r="45.29"/><circle class="dot" data-lot="N1" cx="6495.25" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N2" cx="6335.3" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N3" cx="6184.76" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N4" cx="6034.23" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N5" cx="5883.69" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N6" cx="5733.15" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N7" cx="5582.62" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N8" cx="5432.08" cy="3194.9" r="45.29"/><circle class="dot" data-lot="N9" cx="5272.13" cy="3194.9" r="45.29"/><circle class="dot" data-lot="P1" cx="5025.52" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P2" cx="5185.47" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P3" cx="5336.01" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P4" cx="5486.54" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P5" cx="5637.08" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P6" cx="5787.62" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P7" cx="5938.16" cy="1855.99" r="45.29"/><circle class="dot" data-lot="P8" cx="6098.1" cy="1855.99" r="45.29"/><circle class="dot" data-lot="Q1" cx="4966.35" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q2" cx="4806.41" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q3" cx="4655.87" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q4" cx="4505.33" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q5" cx="4354.79" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q6" cx="4204.25" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q7" cx="4053.72" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q8" cx="3903.18" cy="3194.9" r="45.29"/><circle class="dot" data-lot="Q9" cx="3743.23" cy="3194.9" r="45.29"/><circle class="dot" data-lot="R1" cx="3670.68" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R2" cx="3830.63" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R3" cx="3981.17" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R4" cx="4131.7" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R5" cx="4282.24" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R6" cx="4432.78" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R7" cx="4583.32" cy="1855.99" r="45.29"/><circle class="dot" data-lot="R8" cx="4743.26" cy="1855.99" r="45.29"/></g></g></svg></div>
+    <aside class="side" id="side" aria-live="polite"></aside>
+  </div>
+  <ul class="plans" id="plans" aria-label="Floor plans" hidden></ul>
+  <div class="foot">
+    <a class="btn" id="directions" href="#" target="_blank" rel="noopener">Get Directions<span class="arrow"></span></a>
+    <ul class="legend" id="legend" aria-label="Homesite status key"></ul>
+  </div>
+</main>
+<script>
+(() => {
+/* ==================================================================
+   1. HOMESITE DATA — the "HV" tab in Web Plat Maps is the source of truth;
+   this list is only a fallback for when the sheet can't be reached.
+   Columns: Lot, Listed, Status, Plan, Design, Price, SQFT, Beds, Baths, Lot Page Link, Rendering
+   listed: TRUE makes the homesite clickable (its card opens); FALSE still shows it, just not clickable
+   plan + design: a plan the map knows (see PLANS) colors the house and adds it to the key;
+           any other plan ("The 1,835") or a blank plan draws the house in dark grey
+   status: Available | Move-in ready | Coming soon | Model home | Sold
+   "Sold" keeps the homesite in its plan colors — only the circle turns red.
+   Plan + Design pick the color: e.g. The Horizon / Design B - End Unit
+   link: the homesite's page on the website (adds an "Explore This Home" button to its card)
+   image: a rendering for this homesite; leave blank to use the plan's rendering below
+================================================================== */
+// text for the welcome card shown before a homesite is selected
+const INTRO = {
+  image:   "https://cornerstonehomes.com/wp-content/uploads/slider113/1Edit.jpeg",   // used only if the sheet has no "Hero image" row
+  eyebrow: "Now Selling · Lynnwood, WA",
+  title:   "Welcome to Harmony Village",
+  text:    "New townhomes with premium finishes and efficient floor plans, minutes from I-5, I-405 and Alderwood Mall, with a playground and sports courts on site.",
+  hint:    "Select a homesite on the map to see its details.",
+};
+let DIRECTIONS_URL = "https://www.google.com/maps?q=16605+Ash+Way++Lynnwood%2C+WA+98037"; // the sheet's "Directions link →" row replaces this
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgs5oFVUF5gY3vtGYGV2XYoS2kqnP5KyDB8sKV3_-izspuxymoBHS2xmdngvJx5SUKMiu0LwFKqDq5/pub?gid=469153153&single=true&output=csv"; // paste the HV tab's "Publish to web" CSV link between the quotes
+
+const LOTS = [
+  {lot:"A1", listed:false, status:"Coming soon", plan:"The 1,835", design:"", price:"", sqft:"1,835", beds:"", baths:"", link:"", image:""},
+  {lot:"A2", listed:false, status:"Coming soon", plan:"The 1,805", design:"", price:"", sqft:"1,805", beds:"", baths:"", link:"", image:""},
+  {lot:"A3", listed:false, status:"Coming soon", plan:"The 1,835", design:"", price:"", sqft:"1,835", beds:"", baths:"", link:"", image:""},
+  {lot:"B1", listed:false, status:"Coming soon", plan:"The 1,835", design:"", price:"", sqft:"1,835", beds:"", baths:"", link:"", image:""},
+  {lot:"B2", listed:false, status:"Coming soon", plan:"The 1,805", design:"", price:"", sqft:"1,805", beds:"", baths:"", link:"", image:""},
+  {lot:"B3", listed:false, status:"Coming soon", plan:"The 1,835", design:"", price:"", sqft:"1,835", beds:"", baths:"", link:"", image:""},
+  {lot:"C1", listed:false, status:"Coming soon", plan:"The 1,835", design:"", price:"", sqft:"1,835", beds:"", baths:"", link:"", image:""},
+  {lot:"C2", listed:false, status:"Coming soon", plan:"The 1,742", design:"", price:"", sqft:"1,742", beds:"", baths:"", link:"", image:""},
+  {lot:"C3", listed:false, status:"Coming soon", plan:"The 1,795", design:"", price:"", sqft:"1,795", beds:"", baths:"", link:"", image:""},
+  {lot:"C4", listed:false, status:"Coming soon", plan:"The 1,742", design:"", price:"", sqft:"1,742", beds:"", baths:"", link:"", image:""},
+  {lot:"C5", listed:false, status:"Coming soon", plan:"The 1,795", design:"", price:"", sqft:"1,795", beds:"", baths:"", link:"", image:""},
+  {lot:"C6", listed:false, status:"Coming soon", plan:"The 1,742", design:"", price:"", sqft:"1,742", beds:"", baths:"", link:"", image:""},
+  {lot:"C7", listed:false, status:"Coming soon", plan:"The 1,795", design:"", price:"", sqft:"1,795", beds:"", baths:"", link:"", image:""},
+  {lot:"C8", listed:false, status:"Coming soon", plan:"The 1,835", design:"", price:"", sqft:"1,835", beds:"", baths:"", link:"", image:""},
+  {lot:"D1", listed:false, status:"Coming soon", plan:"The 1,426", design:"", price:"", sqft:"1,426", beds:"", baths:"", link:"", image:""},
+  {lot:"D2", listed:false, status:"Coming soon", plan:"The 1,851", design:"", price:"", sqft:"1,851", beds:"", baths:"", link:"", image:""},
+  {lot:"D3", listed:false, status:"Coming soon", plan:"The 2,217", design:"", price:"", sqft:"2,217", beds:"", baths:"", link:"", image:""},
+  {lot:"D4", listed:false, status:"Coming soon", plan:"The 1,851", design:"", price:"", sqft:"1,851", beds:"", baths:"", link:"", image:""},
+  {lot:"D5", listed:false, status:"Coming soon", plan:"The 2,217", design:"", price:"", sqft:"2,217", beds:"", baths:"", link:"", image:""},
+  {lot:"D6", listed:false, status:"Coming soon", plan:"The 1,851", design:"", price:"", sqft:"1,851", beds:"", baths:"", link:"", image:""},
+  {lot:"D7", listed:false, status:"Coming soon", plan:"The 2,217", design:"", price:"", sqft:"2,217", beds:"", baths:"", link:"", image:""},
+  {lot:"D8", listed:false, status:"Coming soon", plan:"The 1,426", design:"", price:"", sqft:"1,426", beds:"", baths:"", link:"", image:""},
+  {lot:"E1", listed:false, status:"Model home", plan:"The Riverstone", design:"Design A - End Unit", price:"", sqft:"1,826", beds:"", baths:"", link:"", image:""},
+  {lot:"E2", listed:false, status:"Sold", plan:"The Terra", design:"Design A - Interior Unit", price:"", sqft:"1,742", beds:"", baths:"", link:"", image:""},
+  {lot:"E3", listed:false, status:"Sold", plan:"The Emerald", design:"", price:"", sqft:"1,802", beds:"", baths:"", link:"", image:""},
+  {lot:"E4", listed:false, status:"Sold", plan:"The Terra", design:"Design A - Interior Unit", price:"", sqft:"1,742", beds:"", baths:"", link:"", image:""},
+  {lot:"E5", listed:false, status:"Sold", plan:"The Emerald", design:"", price:"", sqft:"1,802", beds:"", baths:"", link:"", image:""},
+  {lot:"E6", listed:false, status:"Sold", plan:"The Terra", design:"Design A - Interior Unit", price:"", sqft:"1,742", beds:"", baths:"", link:"", image:""},
+  {lot:"E7", listed:false, status:"Sold", plan:"The Emerald", design:"", price:"", sqft:"1,802", beds:"", baths:"", link:"", image:""},
+  {lot:"E8", listed:false, status:"Sold", plan:"The Riverstone", design:"Design B - End Unit", price:"", sqft:"1,826", beds:"", baths:"", link:"", image:""},
+  {lot:"F1", listed:true, status:"Available", plan:"The Ember", design:"Design A - End Unit", price:"From $599,990", sqft:"1,426", beds:"3", baths:"2.5", link:"https://cornerstonehomes.com/property/the-ember-design-a-end-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-1426A-2000x940.jpg"},
+  {lot:"F2", listed:true, status:"Available", plan:"The Jade", design:"Design A - Interior Unit", price:"From $649,990", sqft:"1,851", beds:"3", baths:"2.75", link:"https://cornerstonehomes.com/property/the-jade-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-1851A-2000x940.jpg"},
+  {lot:"F3", listed:true, status:"Available", plan:"The Ruby", design:"Design A - Interior Unit", price:"From $659,990", sqft:"2,217", beds:"3", baths:"2.75", link:"https://cornerstonehomes.com/property/the-ruby-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-2217A-2000x940.jpg"},
+  {lot:"F4", listed:true, status:"Available", plan:"The Jade", design:"Design A - Interior Unit", price:"From $649,990", sqft:"1,851", beds:"3", baths:"2.75", link:"https://cornerstonehomes.com/property/the-jade-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-1851A-2000x940.jpg"},
+  {lot:"F5", listed:true, status:"Available", plan:"The Ruby", design:"Design A - Interior Unit", price:"From $659,990", sqft:"2,217", beds:"3", baths:"2.75", link:"https://cornerstonehomes.com/property/the-ruby-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-2217A-2000x940.jpg"},
+  {lot:"F6", listed:true, status:"Available", plan:"The Jade", design:"Design A - Interior Unit", price:"From $649,990", sqft:"1,851", beds:"3", baths:"2.75", link:"https://cornerstonehomes.com/property/the-jade-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-1851A-2000x940.jpg"},
+  {lot:"F7", listed:true, status:"Available", plan:"The Ruby", design:"Design A - Interior Unit", price:"From $659,990", sqft:"2,217", beds:"3", baths:"2.75", link:"https://cornerstonehomes.com/property/the-ruby-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-2217A-2000x940.jpg"},
+  {lot:"F8", listed:true, status:"Available", plan:"The Ember", design:"Design A - End Unit", price:"From $599,990", sqft:"1,426", beds:"3", baths:"2.5", link:"https://cornerstonehomes.com/property/the-ember-design-a-end-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/10/HV-1426A-2000x940.jpg"},
+  {lot:"G1", listed:false, status:"Sold", plan:"The Horizon", design:"Design A - End Unit", price:"", sqft:"1,819", beds:"", baths:"", link:"", image:""},
+  {lot:"G2", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"G3", listed:false, status:"Sold", plan:"The Grove", design:"Design A - Interior Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"G4", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"G5", listed:false, status:"Sold", plan:"The Grove", design:"Design A - Interior Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"G6", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"G7", listed:false, status:"Sold", plan:"The Grove", design:"Design A - Interior Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"G8", listed:false, status:"Sold", plan:"The Horizon", design:"Design B - End Unit", price:"", sqft:"1,819", beds:"", baths:"", link:"", image:""},
+  {lot:"H1", listed:false, status:"Sold", plan:"The Sequoia", design:"Design A - End Unit", price:"", sqft:"1,701", beds:"", baths:"", link:"", image:""},
+  {lot:"H2", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design A - Interior Unit", price:"From $559,990", sqft:"1,647", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-6.jpg"},
+  {lot:"H3", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design B - Interior Unit", price:"From $549,990", sqft:"1,615", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-b-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-7.jpg"},
+  {lot:"H4", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design A - Interior Unit", price:"From $559,990", sqft:"1,647", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-6.jpg"},
+  {lot:"H5", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design B - Interior Unit", price:"From $549,990", sqft:"1,615", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-b-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-7.jpg"},
+  {lot:"H6", listed:false, status:"Sold", plan:"The Camden", design:"Design A - Interior Unit", price:"", sqft:"1,647", beds:"", baths:"", link:"", image:""},
+  {lot:"H7", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design B - Interior Unit", price:"From $549,990", sqft:"1,615", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-b-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-7.jpg"},
+  {lot:"H8", listed:true, status:"Move-in ready", plan:"The Sequoia", design:"Design A - End Unit", price:"From $609,990", sqft:"1,701", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-sequoia-design-a-end-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-5.jpg"},
+  {lot:"J1", listed:false, status:"Sold", plan:"The Horizon", design:"Design C - End Unit", price:"", sqft:"1,819", beds:"", baths:"", link:"", image:""},
+  {lot:"J2", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"J3", listed:false, status:"Sold", plan:"The Grove", design:"Design A - Interior Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"J4", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"J5", listed:false, status:"Sold", plan:"The Grove", design:"Design A - Interior Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"J6", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"J7", listed:false, status:"Sold", plan:"The Grove", design:"Design A - Interior Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"J8", listed:false, status:"Sold", plan:"The Horizon", design:"Design B - End Unit", price:"", sqft:"1,819", beds:"", baths:"", link:"", image:""},
+  {lot:"K1", listed:false, status:"Sold", plan:"The Grove", design:"Design A - End Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"K2", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"K3", listed:true, status:"Move-in ready", plan:"The Grove", design:"Design A - Interior Unit", price:"From $589,990", sqft:"1,790", beds:"4", baths:"3.5", link:"https://cornerstonehomes.com/property/the-grove-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/01/002-3-e1791391147714.jpg"},
+  {lot:"K4", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"K5", listed:true, status:"Move-in ready", plan:"The Grove", design:"Design A - Interior Unit", price:"From $589,990", sqft:"1,790", beds:"4", baths:"3.5", link:"https://cornerstonehomes.com/property/the-grove-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/01/002-3-e1791391147714.jpg"},
+  {lot:"K6", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"K7", listed:false, status:"Sold", plan:"The Horizon", design:"Design B - End Unit", price:"", sqft:"1,819", beds:"", baths:"", link:"", image:""},
+  {lot:"L1", listed:false, status:"Sold", plan:"The Horizon", design:"Design B - End Unit", price:"", sqft:"1,819", beds:"", baths:"", link:"", image:""},
+  {lot:"L2", listed:false, status:"Sold", plan:"The Atlanta", design:"Design A - Interior Unit", price:"", sqft:"1,735", beds:"", baths:"", link:"", image:""},
+  {lot:"L3", listed:true, status:"Move-in ready", plan:"The Grove", design:"Design A - Interior Unit", price:"From $589,990", sqft:"1,790", beds:"4", baths:"3.5", link:"https://cornerstonehomes.com/property/the-grove-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/01/002-3-e1791391147714.jpg"},
+  {lot:"L4", listed:true, status:"Move-in ready", plan:"The Atlanta", design:"Design A - Interior Unit", price:"From $590,990", sqft:"1,735", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-atlanta-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/02/008-6.jpg"},
+  {lot:"L5", listed:true, status:"Move-in ready", plan:"The Grove", design:"Design A - Interior Unit", price:"From $589,990", sqft:"1,790", beds:"4", baths:"3.5", link:"https://cornerstonehomes.com/property/the-grove-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/01/002-3-e1791391147714.jpg"},
+  {lot:"L6", listed:true, status:"Move-in ready", plan:"The Atlanta", design:"Design A - Interior Unit", price:"From $590,990", sqft:"1,735", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-atlanta-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/02/008-6.jpg"},
+  {lot:"L7", listed:false, status:"Sold", plan:"The Grove", design:"Design A - End Unit", price:"", sqft:"1,790", beds:"", baths:"", link:"", image:""},
+  {lot:"M1", listed:true, status:"Move-in ready", plan:"The Sequoia", design:"Design A - End Unit", price:"From $609,990", sqft:"1,701", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-sequoia-design-a-end-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-5.jpg"},
+  {lot:"M2", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design B - Interior Unit", price:"From $549,990", sqft:"1,615", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-b-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-7.jpg"},
+  {lot:"M3", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design A - Interior Unit", price:"From $559,990", sqft:"1,647", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-6.jpg"},
+  {lot:"M4", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design B - Interior Unit", price:"From $549,990", sqft:"1,615", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-b-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-7.jpg"},
+  {lot:"M5", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design A - Interior Unit", price:"From $559,990", sqft:"1,647", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-6.jpg"},
+  {lot:"M6", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design B - Interior Unit", price:"From $549,990", sqft:"1,615", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-b-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-7.jpg"},
+  {lot:"M7", listed:true, status:"Move-in ready", plan:"The Camden", design:"Design A - Interior Unit", price:"From $559,990", sqft:"1,647", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-camden-design-a-interior-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-6.jpg"},
+  {lot:"M8", listed:true, status:"Move-in ready", plan:"The Sequoia", design:"Design A - End Unit", price:"From $609,990", sqft:"1,701", beds:"3", baths:"3.25", link:"https://cornerstonehomes.com/property/the-sequoia-design-a-end-unit-harmony-village/", image:"https://cornerstonehomes.com/wp-content/uploads/2026/07/3-Edit-5.jpg"},
+  {lot:"N1", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N2", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N3", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N4", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N5", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N6", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N7", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N8", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"N9", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P1", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P2", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P3", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P4", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P5", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P6", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P7", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"P8", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q1", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q2", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q3", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q4", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q5", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q6", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q7", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q8", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"Q9", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R1", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R2", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R3", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R4", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R5", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R6", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R7", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+  {lot:"R8", listed:false, status:"Coming soon", plan:"", design:"", price:"", sqft:"", beds:"", baths:"", link:"", image:""},
+];
+
+/* 2. PLANS — colors matched to the printed site plan legend.
+   design: the same plan can come in more than one color (Horizon A/B/C, Grove end/interior).
+   Add image:"..." to a plan to show its rendering on every homesite with that plan. */
+const PLANS = [
+  {name:"The Riverstone", design:"Design A - End Unit",      base:"#10666A", stripe:"#0A4245", text:"#10666A"},
+  {name:"The Riverstone", design:"Design B - End Unit",      base:"#52A8B0", stripe:"#10666A", text:"#2D8C95"},
+  {name:"The Sequoia",    design:"Design A - End Unit",      base:"#5A2A42", stripe:"#B99BAD", text:"#5A2A42"},
+  {name:"The Camden",     design:"Design A - Interior Unit", base:"#445567",                   text:"#445567"},
+  {name:"The Camden",     design:"Design B - Interior Unit", base:"#78889B",                   text:"#78889B"},
+  {name:"The Grove",      design:"Design A - End Unit",      base:"#6D9A7A", stripe:"#9FC2AA", text:"#6D9A7A"},
+  {name:"The Grove",      design:"Design A - Interior Unit", base:"#6D9A7A",                   text:"#6D9A7A"},
+  {name:"The Ember",      design:"Design A - End Unit",      base:"#7D1B05", stripe:"#DB5C40", text:"#7D1B05"},
+  {name:"The Ruby",       design:"Design A - Interior Unit", base:"#7D1B05",                   text:"#6C332C"},
+  {name:"The Jade",       design:"Design A - Interior Unit", base:"#90A827",                   text:"#90A827"},
+  {name:"The Atlanta",    design:"Design A - Interior Unit", base:"#2B7288",                   text:"#2B7288"},
+  {name:"The Horizon",    design:"Design A - End Unit",      base:"#985B37", stripe:"#AB721D", text:"#985B37"},
+  {name:"The Horizon",    design:"Design B - End Unit",      base:"#BF9568", stripe:"#985B36", text:"#985B37"},
+  {name:"The Horizon",    design:"Design C - End Unit",      base:"#53433A", stripe:"#BA9166", text:"#985B37"},
+  {name:"The Terra",      design:"",                         base:"#776037",                   text:"#776037"},
+  {name:"The Emerald",    design:"",                         base:"#1D5C4D",                   text:"#1D5C4D"},
+  {name:"TBD",            base:"#FEFEFE", tbd:true},
+];
+const STATUSES = [
+  {name:"Move-in ready", label:"Move-in Ready", hex:"#6E9C5C"},
+  {name:"Available",     label:"Available",     hex:"#3D6983"},
+  {name:"Coming soon",   label:"Coming Soon",   hex:"#7C7C7C"},
+  {name:"Model home",    label:"Model Home",    hex:"#333333"},
+  {name:"Sold",          label:"Sold",          hex:"#993400", sold:true},   // red circle; the homesite keeps its plan colors
+];
+const UNRELEASED = "#4C4B4D";   // homesites not listed yet
+
+/* ==================================================================
+   Map logic — no edits needed below this line
+================================================================== */
+const svg = document.getElementById('plat');
+const NS = 'http://www.w3.org/2000/svg';
+const norm = s => (s||'').trim().toLowerCase();
+const squash = s => norm(s).replace(/[^a-z]/g, '');
+const statusOf = s => STATUSES.find(x => squash(x.name) === squash(s)) || STATUSES.find(x => x.sold); // misspelled = Sold, as on the other maps
+// "Design B - End Unit", "B End", "design b" ... -> {letter:'b', unit:'end'}
+const designKey = s => { const t = norm(s); const m = t.match(/design\s*([a-z])\b/) || t.match(/^([a-z])\b/);
+  return {letter: m ? m[1] : '', unit: /\bend\b/.test(t) ? 'end' : /\bint/.test(t) ? 'int' : ''}; };
+function planKey(r){
+  const n = norm(r && r.plan);
+  const named = PLANS.filter(x => !x.tbd && (norm(x.name) === n || norm(x.name) === 'the ' + n));
+  if (!named.length) return PLANS.find(x => x.tbd);
+  const want = designKey(r.design);
+  const score = x => { const d = designKey(x.design); return (want.letter && d.letter === want.letter ? 2 : 0) + (want.unit && d.unit === want.unit ? 1 : 0); };
+  return named.slice().sort((a, b) => score(b) - score(a))[0];
+}
+const planLabel = r => (!r.plan || /^tbd$/i.test(r.plan.trim())) ? 'To be determined' : r.plan.trim();
+const designLabel = (r, plan) => (r.design || '').trim() || (plan.tbd ? '' : plan.design || '');
+let data = LOTS.map(r => ({...r}));
+let selected = null;
+
+// hatch patterns for the end units
+const defs = svg.querySelector('defs') || svg.insertBefore(document.createElementNS(NS, 'defs'), svg.firstChild);
+PLANS.forEach((p, i) => {
+  p.fill = p.base;
+  if (!p.stripe) return;
+  const pat = document.createElementNS(NS, 'pattern');
+  pat.id = 'hatch' + i;
+  pat.setAttribute('patternUnits', 'userSpaceOnUse');
+  pat.setAttribute('width', '44'); pat.setAttribute('height', '44');
+  pat.setAttribute('patternTransform', 'rotate(-45)');
+  pat.innerHTML = `<rect width="44" height="44" fill="${p.base}"/><rect width="11" height="44" fill="${p.stripe}"/>`;
+  defs.appendChild(pat);
+  p.fill = `url(#hatch${i})`;
+});
+const chipFill = p => p.stripe ? `repeating-linear-gradient(45deg, ${p.base} 0 8px, ${p.stripe} 8px 10.5px)` : p.base;
+
+// selection outline (drawn under the labels and dots)
+const outlineG = svg.querySelector('#lot-outline');
+const outOut = document.createElementNS(NS, 'polygon'); outOut.setAttribute('class', 'outline-out');
+const outIn  = document.createElementNS(NS, 'polygon'); outIn.setAttribute('class', 'outline-in');
+outlineG.append(outOut, outIn);
+
+const els = lot => svg.querySelectorAll(`[data-lot="${CSS.escape(lot)}"]`);
+const house = lot => svg.querySelector(`.house[data-lot="${CSS.escape(lot)}"]`);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// "TRUE", "Yes", "x", a ticked checkbox, etc. all count as listed
+function isListed(v){ return v === true || /^(true|yes|y|x|1|listed|✓|✔)$/i.test(String(v ?? '').trim()); }
+// listed and still for sale: clickable, opens the card
+function onMarket(r){ return !!r && isListed(r.listed) && !statusOf(r.status).sold; }
+
+function render(){
+  const byLot = Object.fromEntries(data.map(r => [r.lot, r]));
+  svg.querySelectorAll('.house').forEach(h => {
+    const lot = h.dataset.lot, r = byLot[lot];
+    const st = statusOf(r && r.status), plan = planKey(r);
+    const colored = !!r && !plan.tbd, live = onMarket(r);
+    els(lot).forEach(el => {
+      el.classList.toggle('unlisted', !colored);
+      el.classList.toggle('on', live);
+      if (el.classList.contains('house')) el.style.fill = colored ? plan.fill : UNRELEASED;
+      if (el.classList.contains('dot')) el.style.fill = st.hex;
+    });
+    if (live){
+      h.setAttribute('tabindex', '0'); h.setAttribute('role', 'button');
+      h.setAttribute('aria-label', `Homesite ${lot}, ${planLabel(r)} ${designLabel(r, plan)}, ${st.label}`);
+    } else { h.removeAttribute('tabindex'); h.removeAttribute('role'); h.removeAttribute('aria-label'); }
+  });
+  drawSide(); drawPlanKey();
+}
+
+// plan key: plans with at least one listed, unsold homesite, plus the model home's plan
+const inKey = r => onMarket(r) || (!!r && statusOf(r.status).name === 'Model home');
+function drawPlanKey(){
+  const used = new Set(data.filter(inKey).map(r => planKey(r)).filter(p => !p.tbd));
+  const list = PLANS.filter(p => used.has(p));
+  const ul = document.getElementById('plans');
+  ul.hidden = !list.length;
+  ul.dataset.count = list.length;
+  ul.innerHTML = list.map(p => `<li><span class="chip" style="background:${chipFill(p)}"></span><span><b style="color:${p.text}">${esc(p.name)}</b>${p.design ? `<small style="color:${p.text}">${esc(p.design)}</small>` : ''}</span></li>`).join('');
+}
+
+// status key
+document.getElementById('legend').innerHTML = STATUSES.map(s =>
+  `<li><span class="swatch" style="background:${s.hex}"></span>${s.label}</li>`).join('');
+const dir = document.getElementById('directions');
+const setDirections = () => { dir.hidden = !DIRECTIONS_URL; if (DIRECTIONS_URL) dir.href = DIRECTIONS_URL; };
+setDirections();
+
+function drawSide(){
+  const side = document.getElementById('side');
+  const r = selected && data.find(x => x.lot === selected);
+  if (!r || !onMarket(r)){
+    selected = null;
+    side.className = 'side is-empty';
+    const hero = INTRO.image
+      ? `<figure class="rendering" style="--plan:linear-gradient(135deg,#6F9C5C,#3f5c37)"><img src="${esc(INTRO.image)}" alt="Harmony Village" onerror="this.parentNode.classList.add('empty');this.remove()"><span>Harmony Village</span></figure>`
+      : `<figure class="rendering empty" style="--plan:linear-gradient(135deg,#6F9C5C,#3f5c37)"><span>Harmony Village</span></figure>`;
+    side.innerHTML = `${hero}<p class="eyebrow">${esc(INTRO.eyebrow)}</p><h2>${esc(INTRO.title)}</h2><p class="intro">${esc(INTRO.text)}</p><p class="hint">${esc(INTRO.hint)}</p>`;
+    outOut.setAttribute('points', ''); outIn.setAttribute('points', '');
+    return;
+  }
+  const st = statusOf(r.status), plan = planKey(r), design = designLabel(r, plan);
+  const pts = house(r.lot).getAttribute('points');
+  outOut.setAttribute('points', pts); outIn.setAttribute('points', pts);
+  side.className = 'side';
+  side.innerHTML = `
+    <button class="close" aria-label="Close homesite details">Close</button>
+    ${renderImg(r, plan)}
+    <div class="badge"><span class="pin" style="background:${st.hex}"></span>${st.label}</div>
+    <h2>Homesite ${esc(r.lot)}</h2>
+    <p class="price">${r.price ? esc(money(r.price)) : 'Contact us for pricing'}</p>
+    <dl>
+      <dt>Plan</dt><dd>${esc(planLabel(r))}${design ? ' ' + esc(design.replace(/^design\s+/i, '')) : ''}</dd>
+      <dt>SQFT</dt><dd>${show(r.sqft, v => withCommas(v))}</dd>
+      <dt>Beds</dt><dd>${show(r.beds)}</dd>
+      <dt>Baths</dt><dd>${show(r.baths)}</dd>
+    </dl>
+    ${r.link ? `<a class="btn" href="${esc(r.link)}" target="_top">Explore This Home<span class="arrow"></span></a>` : ''}`;
+  side.querySelector('.close').onclick = () => { selected = null; render(); };
+  if (matchMedia('(max-width:999px)').matches) side.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+// value formatting: "489900" -> "$489,900", "1850" -> "1,850"; blanks show a dash
+const isNum = v => /^\$?[\d,]+(\.\d+)?$/.test(String(v).trim());
+const withCommas = v => isNum(v) ? Number(String(v).replace(/[$,]/g,'')).toLocaleString('en-US') : v;
+const money = v => isNum(v) ? '$' + withCommas(v) : v;
+const show = (v, f = x => x) => (v ?? '') === '' ? '<span style="color:var(--ink-soft);font-weight:400">—</span>' : esc(f(v));
+
+function renderImg(r, plan){
+  const src = r.image || plan.image;
+  const fill = plan.stripe ? `repeating-linear-gradient(-45deg, ${plan.base} 0 10px, ${plan.stripe} 10px 13px)` : plan.base;
+  if (src) return `<figure class="rendering" style="--plan:${fill}"><img src="${esc(src)}" alt="Rendering of ${esc(planLabel(r))} on homesite ${esc(r.lot)}" onerror="this.parentNode.classList.add('empty');this.insertAdjacentHTML('afterend','<span>Rendering coming soon</span>');this.remove()"></figure>`;
+  return `<figure class="rendering empty" style="--plan:${fill}"><span>Rendering coming soon</span></figure>`;
+}
+
+// interaction: the house, its circle or its number all open the homesite
+function pick(lot){
+  const r = data.find(x => x.lot === lot);
+  if (!onMarket(r)) return;
+  selected = selected === lot ? null : lot; render();
+}
+svg.addEventListener('click', e => { const t = e.target.closest('.house,.dot'); if (t) pick(t.dataset.lot); });
+svg.addEventListener('keydown', e => {
+  const t = e.target.closest('.house'); if (!t) return;
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(t.dataset.lot); }
+});
+svg.addEventListener('pointerover', e => { const t = e.target.closest('.dot'); if (t) house(t.dataset.lot)?.classList.add('hover'); });
+svg.addEventListener('pointerout',  e => { const t = e.target.closest('.dot'); if (t) house(t.dataset.lot)?.classList.remove('hover'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && selected) { selected = null; render(); } });
+
+// live data from the HV sheet tab
+function parseCSV(text){
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"' && text[i+1] === '"'){ cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ','){ row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r'){ if (ch === '\r' && text[i+1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+// sheet headers are matched loosely: "Lot Page Link" -> link, "Elevation" -> design, etc.
+const HEADER_KEYS = {lot:'lot', homesite:'lot', status:'status', plan:'plan', design:'design', elevation:'design', price:'price', sqft:'sqft', squarefeet:'sqft',
+  beds:'beds', baths:'baths', link:'link', lotpage:'link', lotpagelink:'link', homesitelink:'link', rendering:'image', image:'image',
+  listed:'listed', listedonwebsite:'listed', list:'listed', onwebsite:'listed'};
+const withUnit = (sheet, built) => { const s = designKey(sheet), b = designKey(built);
+  return s.letter && !s.unit && b.unit && b.letter === s.letter ? built : sheet; };
+function applySheet(csvText){
+  const grid = parseCSV(csvText);
+  const head = (grid.shift() || []).map(h => HEADER_KEYS[squash(h)]);
+  const rows = grid.filter(r => r.some(c => c.trim())).map(cells => {
+    const r = {}; head.forEach((k, i) => { if (k) r[k] = (cells[i] || '').trim(); }); return r;
+  });
+  // labeled rows anywhere in the tab: the value is the next filled cell after the label
+  const labeled = re => { for (const cells of grid) { const i = cells.findIndex(c => re.test(c.trim())); if (i >= 0) { const v = cells.slice(i + 1).find(c => c.trim()); if (v) return v.trim(); } } return ''; };
+  const hero = rows.find(r => /^(hero|hero image|hero photo|community photo|welcome photo)$/i.test((r.lot || '').trim()));
+  if (hero && hero.image) INTRO.image = hero.image;
+  const text = labeled(/^(plat description|description|welcome text|intro)\b/i); if (text) INTRO.text = text;
+  const link = labeled(/^directions( link)?\b/i); if (link) { DIRECTIONS_URL = link; setDirections(); }
+  const byLot = Object.fromEntries(rows.filter(r => r.lot).map(r => [r.lot.toUpperCase(), r]));
+  data = LOTS.map(r => {
+    const s = byLot[r.lot.toUpperCase()];
+    if (!s) return r;
+    // the sheet is the source of truth; a blank status keeps the built-in one so a homesite never vanishes by accident.
+    // The tab's Design dropdown only says "Design A"; whether it's an end or interior unit comes from the drawing.
+    return {...r, ...s, status: s.status || r.status, design: withUnit(s.design ?? r.design, r.design)};
+  });
+  render(); lockStage();
+}
+async function loadSheet(){
+  if (!SHEET_CSV_URL) return;
+  try{
+    const res = await fetch(SHEET_CSV_URL, {cache:'no-store'});
+    if (!res.ok) throw new Error(res.status);
+    applySheet(await res.text());
+  } catch(err){ console.warn('Homesite sheet could not be loaded; showing built-in data.', err); }
+}
+
+// plan key: two rows on tablets and desktops, shrinking the type only as much as the longest design line needs
+const keyEl = document.getElementById('plans');
+function fitKey(){
+  keyEl.style.fontSize = ''; keyEl.style.gridTemplateColumns = '';
+  if (matchMedia('(max-width:560px)').matches || keyEl.hidden) return;
+  keyEl.style.setProperty('--cols', Math.max(1, Math.ceil((+keyEl.dataset.count || 0) / 2)));
+  let size = parseFloat(getComputedStyle(keyEl).fontSize);
+  const tooWide = () => [...keyEl.children].some(li => li.scrollWidth > li.clientWidth + 0.5);
+  while (tooWide() && size > 8) { size -= 0.25; keyEl.style.fontSize = size + 'px'; }
+  // still too tight for two rows (a narrow frame): let the key wrap instead of shrinking further
+  if (tooWide()) { keyEl.style.fontSize = ''; keyEl.style.gridTemplateColumns = 'repeat(auto-fill,minmax(170px,1fr))'; }
+}
+new MutationObserver(fitKey).observe(keyEl, {childList: true});
+addEventListener('resize', fitKey);
+document.fonts && document.fonts.ready.then(fitKey);
+// desktop: hold the map still. The stage is sized once for the tallest card (welcome or any homesite),
+// so switching cards never changes its height or moves the map.
+function lockStage(){
+  const st = document.querySelector('.stage'), side = document.getElementById('side');
+  st.style.minHeight = '';
+  if (matchMedia('(max-width:999px)').matches) return;
+  const keep = selected; let h = 0;
+  for (const lot of [null, ...data.filter(onMarket).map(r => r.lot)]) { selected = lot; drawSide(); h = Math.max(h, side.offsetHeight); }
+  selected = keep; drawSide();
+  const m = getComputedStyle(side);
+  st.style.minHeight = Math.ceil(h + parseFloat(m.marginTop) + parseFloat(m.marginBottom)) + 'px';
+}
+addEventListener('resize', lockStage);
+document.fonts && document.fonts.ready.then(lockStage);
+render(); lockStage(); loadSheet();
+// phones: the map scrolls sideways — start it centered on the homesites
+const mapEl = document.querySelector('.map');
+if (mapEl.scrollWidth > mapEl.clientWidth) mapEl.scrollLeft = (mapEl.scrollWidth - mapEl.clientWidth) * 0.6;
+
+// when embedded in an iframe, tell the host page how tall the map is
+const wrapEl = document.querySelector('.wrap');
+// report the full page height (everything down to the bottom of the wrapper, plus any space above it)
+const postHeight = () => { try { parent.postMessage({lotMapHeight: Math.ceil(wrapEl.getBoundingClientRect().bottom + scrollY)}, '*'); } catch(e){} };
+if (window.ResizeObserver) new ResizeObserver(postHeight).observe(wrapEl);
+addEventListener('load', postHeight);
+})();
+</script>
+</body>
+</html>
